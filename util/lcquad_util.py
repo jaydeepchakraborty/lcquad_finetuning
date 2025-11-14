@@ -1,26 +1,33 @@
 from lcquad_finetuning.util.util_lib import *
 
+
+
 class LCQuadUtil:
 
     def __init__(self):
-        """
-        GPT-3,4 are not available
-        """
-        self.encodings = {
-            "gpt2": tiktoken.get_encoding("gpt2"),
-            # # "gpt3": tiktoken.get_encoding("p50k_base"),  # commonly associated with gpt-3 models
-            # "gpt4": tiktoken.get_encoding("cl100k_base"),  # used for gpt-4 and later version
-            # "gpt4o": tiktoken.get_encoding("o200k_base"),  # used for gpt-4 and later version
-        }
+        # """
+        # GPT-3,4 are not available
+        # """
+        # self.encodings = {
+        #     "gpt2": tiktoken.get_encoding("gpt2"),
+        #     # # "gpt3": tiktoken.get_encoding("p50k_base"),  # commonly associated with gpt-3 models
+        #     # "gpt4": tiktoken.get_encoding("cl100k_base"),  # used for gpt-4 and later version
+        #     # "gpt4o": tiktoken.get_encoding("o200k_base"),  # used for gpt-4 and later version
+        # }
+        pass
 
-        # # Load the base GPT-2 tokenizer
-        # tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-        # new_tokens = ["SPARQL", "ENTITY_01633", "ENTITY_03800"]
-        # tokenizer.add_tokens(new_tokens)
+    @staticmethod
+    def save_tokenizer(new_tokens, conf):
+        tokenizer = GPT2Tokenizer.from_pretrained(conf['model']['tokenizer'])
+        tokenizer.add_tokens(new_tokens)
+        tokenizer.pad_token = tokenizer.eos_token # <|endoftext|>
+        tokenizer.pad_token_id = tokenizer.eos_token_id  # usually 50256
+        tokenizer.save_pretrained(conf["model"]["tokenizer_path"])
 
-    def get_tokenizer(self, tokenizer_id):
-        # tiktoken
-        return self.encodings[tokenizer_id]
+    @staticmethod
+    def get_tokenizer(conf):
+        tokenizer = GPT2Tokenizer.from_pretrained(conf["model"]["tokenizer_path"])
+        return tokenizer
 
     @staticmethod
     def format_entry(entry, ind):

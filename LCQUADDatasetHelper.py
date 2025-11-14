@@ -30,11 +30,19 @@ class LCQUADDatasetHelper:
         label_eid_map = {"ENTITY_"+len(str(e_ids_len))*"0": "ENTITY_UNK"}
         e_idx = 1
 
+        new_token = set()
+        new_token.add("ENTITY_00000")
+        new_token.add("SPARQL")
         for eid in tqdm(eids, desc="ENTITY_ID fetching"):
             label = self.populate_labels(e_idx, e_ids_len)
             eid_label_map[eid] = label
             label_eid_map[label] = eid
+            new_token.add(label)
             e_idx += 1
+
+        new_token = list(new_token)
+        with open(self.config['data']['new_token'], "w") as f:
+            json.dump(new_token, f, indent=2)
 
         with open(self.config['data']['sparql_wikidata_eids_labels_mapping'], "w") as f:
             json.dump(eid_label_map, f, indent=2)
@@ -84,6 +92,11 @@ class LCQUADDatasetHelper:
 
         return query
 
+    def get_new_token_lst(self):
+        new_tokens = {}
+        with open(self.config['data']['new_token'], "r") as f:
+            new_tokens = json.load(f)
+        return list(new_tokens)
 
     def modf_lcquad_data(self):
 
@@ -93,6 +106,7 @@ class LCQUADDatasetHelper:
         train_df = train_df[['paraphrased_question', 'sparql_wikidata']]
         train_df.rename(columns={'paraphrased_question': 'question', 'sparql_wikidata': 'sparql'}, inplace=True)
         train_df = self.modf_entity_ids_helper(train_df, eid_lbl_mapping)
+        print(f"train_df info:- ")
         print(train_df.shape)
         print(train_df.head())
 
@@ -104,6 +118,7 @@ class LCQUADDatasetHelper:
         test_df = test_df[['paraphrased_question', 'sparql_wikidata']]
         test_df.rename(columns={'paraphrased_question': 'question', 'sparql_wikidata': 'sparql'}, inplace=True)
         test_df = self.modf_entity_ids_helper(test_df, eid_lbl_mapping)
+        print(f"test_df info:- ")
         print(test_df.shape)
         print(test_df.head())
         test_df.to_csv(self.config['data']['modf_test_data'], index=False)
@@ -125,17 +140,15 @@ class LCQUADDatasetHelper:
 
     def prepare_data(self):
         # Step-1: saving mapped ids
-        # self.save_mapping_id()
+        self.save_mapping_id()
 
-        # Step-2: loading mapped ids
-        # self.load_eid_lbl_mapping_id()
+        # Step-2: modify data (SPARQL ENTRY)
+        self.modf_lcquad_data()
 
-        # Step-3: modify data (SPARQL ENTRY)
-        # self.modf_lcquad_data()
-
-        # Step-4: populate dataset
-        lcquad_util = LCQuadUtil()
-        tokenizer = lcquad_util.get_tokenizer(self.config['model']['tokenizer'])  # loading tokenizer
+        # Step-3: populate dataset (torch)
+        new_tokens = self.get_new_token_lst()
+        # LCQuadUtil.save_tokenizer(new_tokens, self.config)
+        tokenizer = LCQuadUtil.get_tokenizer(self.config)  # loading tokenizer
 
         file_path = self.config['data']['modf_train_data']
         train_dataset = self.populate_dataset(file_path, tokenizer)

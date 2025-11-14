@@ -6,7 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 from util.util_lib import *
 from lcquad_finetuning.LCQUADDatasetHelper import LCQUADDatasetHelper
 from lcquad_finetuning.config.lcquad_config import LCQuadConfig
-from lcquad_finetuning.LCQUADModel import LCQUADModel
+from lcquad_finetuning.LCQUADModelHelper import LCQUADModelHelper
 
 def main():
     # Setting RANDOM SEED
@@ -19,32 +19,25 @@ def main():
 
     ########################################################
     # Step-1
-    # preparing dataset
+    # preparing dataset (LCQUAD)
     ########################################################
     # lcquaddataset_helper = LCQUADDatasetHelper(lcquad_conf)
     # lcquaddataset_helper.prepare_data()
     ########################################################
 
     ########################################################
-    # STEP-3
-    # training gpt model (LCQUAD)
+    # STEP-2
+    # training, testing, inference LCQUAD model (GPT-2 model)
     #######################################################
-    # lcquad_model_obj = LCQUADModel(lcquad_conf)
-    # lcquad_model_obj.training_model()
-    ########################################################
+    lcquad_model_helper_obj = LCQUADModelHelper(lcquad_conf)
 
-    ########################################################
-    # STEP-6
+    # training gpt model (LCQUAD)
+    # lcquad_model_helper_obj.training_model()
+
     # test on trained model (LCQUAD)
-    ########################################################
-    # lcquad_model_obj = LCQUADModel(lcquad_conf)
-    # lcquad_model_obj.test_lcquad_model()
-    ########################################################
+    # lcquad_model_helper_obj.test_lcquad_model()
 
-    ########################################################
-    # STEP-7
     # inference on trained model (LCQUAD)
-    ########################################################
     test_text = {
         "question": "Which languages does Odia speak?",
         "org_sparql": "SELECT (COUNT(?sub) AS ?value ) { ?sub wdt:P1412 wd:Q33810 }"
@@ -74,13 +67,10 @@ def main():
     #     "org_sparql": "SELECT (COUNT(?obj) AS ?value ) { wd:Q338430 wdt:P2563 ?obj }"
     # }
 
-    lcquad_model_obj = LCQUADModel(lcquad_conf)
-    lcquad_model_obj.inference_instruction_model(test_text)
+    lcquad_model_helper_obj.inference_lcquad_model(test_text)
     ########################################################
 
     return
-
-
 
 """
 python3 main.py

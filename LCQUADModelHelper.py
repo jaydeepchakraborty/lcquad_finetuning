@@ -1,18 +1,21 @@
 from lcquad_finetuning.util.util_lib import *
 from lcquad_finetuning.util.lcquad_util import LCQuadUtil
-from lcquad_finetuning.GPTModel import GPTModel
 from lcquad_finetuning.GPTModelLoader import GPTModelLoader
 from lcquad_finetuning.LCQUADDatasetHelper import LCQUADDatasetHelper
 from lcquad_finetuning.LCQUADDataLoaderHelper import LCQUADDataLoaderHelper
 
-class LCQUADModel:
+class LCQUADModelHelper:
     def __init__(self, conf):
         self.config = conf
 
     def calc_loss_batch(self, input_batch, target_batch, model, device):
-        input_batch, target_batch = input_batch.to(device), target_batch.to(device)
-        logits = model(input_batch)
-        loss = torch.nn.functional.cross_entropy(logits.flatten(0, 1), target_batch.flatten())
+        # input_batch, target_batch = input_batch.to(device), target_batch.to(device)
+        # logits = model(input_batch)
+        # loss = torch.nn.functional.cross_entropy(logits.flatten(0, 1), target_batch.flatten())
+
+        outputs = model(input_ids=input_batch, labels=target_batch)
+        loss = outputs.loss
+
         return loss
 
     def calc_loss_loader(self, dataloader, model, device):
@@ -27,7 +30,8 @@ class LCQUADModel:
             for batch_data in dataloader:
                 # inputs_txt, targets_txt = batch_data['inputs_txt'], batch_data['targets_txt']
                 input_batch, target_batch = batch_data['inputs_tensor'], batch_data['targets_tensor']
-                total_loss += self.calc_loss_batch(input_batch, target_batch, model, device)
+                loss = self.calc_loss_batch(input_batch, target_batch, model, device)
+                total_loss += loss.item()
 
         model.train()
         return total_loss / num_batches
@@ -41,7 +45,7 @@ class LCQUADModel:
         device = self.config['model']['device']
         print(f"device:- {device}")
 
-        optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5, weight_decay=1e-5)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=2e-5)
 
         for epoch in range(num_epochs):
 
@@ -53,6 +57,7 @@ class LCQUADModel:
 
                 optimizer.zero_grad()
                 loss = self.calc_loss_batch(input_batch, target_batch, model, device)
+
                 loss.backward()
                 optimizer.step()
 
@@ -84,16 +89,27 @@ class LCQUADModel:
         lcquad_gpt_model = self.train_lcquad_model(model_obj, train_dataloader_obj, val_dataloader_obj)
 
         model_path = self.config['model']['model_path'].replace("{model_ind}", f"{self.config['model']['chosen_model']}")
-        torch.save(lcquad_gpt_model.state_dict(), model_path)
+        self.save_lcquad_model(lcquad_gpt_model, model_path)
+
         print(f"model saved to {model_path}")
+
+        return
+
+
+    def save_lcquad_model(self, lcquad_gpt_model, model_path):
+        # torch.save(lcquad_gpt_model.state_dict(), model_path)
+        lcquad_gpt_model.save_pretrained(model_path)
+        return
 
     def load_lcquad_model(self, model_path):
         # creating model object instance
-        config = self.config['model']['gpt_config']['basic_config']
-        config.update(self.config['model']['gpt_config']['model_config'])
-        model_obj = GPTModel(config)
+        # config = self.config['model']['gpt_config']['basic_config']
+        # config.update(self.config['model']['gpt_config']['model_config'])
+        # model_obj = GPTModel(config)
 
-        model_obj.load_state_dict(torch.load(model_path, weights_only=True))
+        # model_obj.load_state_dict(torch.load(model_path, weights_only=True))
+
+        model_obj = GPT2LMHeadModel.from_pretrained(model_path)
         return model_obj
 
     def test_lcquad_model(self):
@@ -107,43 +123,45 @@ class LCQUADModel:
         model_ind = self.config["model"]["chosen_model"]
         model_path = self.config['model']['inf_model_path'].replace("{model_ind}", f"{model_ind}")
         print(f"loading model from {model_path}")
-        instruction_model = self.load_lcquad_model(model_path)
+        lcquad_model = self.load_lcquad_model(model_path)
 
         device = self.config['model']['device']
         print(f"device:- {device}")
-        test_loss = self.calc_loss_loader(test_dataloader_obj, instruction_model, device)
+        test_loss = self.calc_loss_loader(test_dataloader_obj, lcquad_model, device)
         print(f"test loss:- {test_loss:3f}")
 
+        return
+
     def text_to_token(self, text, tokenizer):
-        encoded = tokenizer.encode(text, allowed_special={'<|endoftext|>'})
-        encoded_tensor = torch.tensor(encoded).unsqueeze(0)
-        return encoded_tensor
+        text_ids = tokenizer.encode(text, return_tensors="pt", padding=True)
+        return text_ids
 
     def token_to_text(self, token_ids, tokenizer):
-        flat_tokens = token_ids.squeeze(0).tolist()
-        return tokenizer.decode(flat_tokens)
+        output_text = tokenizer.decode(token_ids[0], skip_special_tokens=True)
+        return output_text
 
-    def generate_text(self, model, idx, context_size, max_new_tokens=50):
+    def generate_text(self, model, input_ids, context_size, tokenizer, max_new_tokens=60):
 
-        for _ in range(max_new_tokens):
+        # input_ids_truncated = input_ids[:, -context_size:]
 
-            idx_cond = idx[:, -context_size:]
+        print("input_ids")
+        print(input_ids)
 
-            with torch.no_grad():
-                logits = model(idx_cond)
+        attention_mask = (input_ids != tokenizer.pad_token_id).long()
 
-            logits = logits[:, -1, :]
+        with torch.no_grad():
+            output_ids = model.generate(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                max_new_tokens=max_new_tokens,
+                pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.pad_token_id,
+            )
 
-            probs = torch.softmax(logits, dim=-1)
+        print("output_ids")
+        print(output_ids)
 
-            idx_next = torch.argmax(probs, dim=-1, keepdim=True)
-
-            if idx_next.item() == 50256:
-                break
-
-            idx = torch.cat([idx_cond, idx_next], dim=1)
-
-        return idx
+        return output_ids
 
     def get_sparql(self, query):
 
@@ -164,11 +182,11 @@ class LCQUADModel:
         print(strt_context)
         print("===========================")
 
-        context_size = model.pos_emb.weight.shape[0]
+        context_size = 1024
         encoded_text = self.text_to_token(strt_context, tokenizer).to(device=device)
 
-        token_ids = self.generate_text(model, encoded_text, context_size)
-        token_ids = token_ids.to(device=device).detach().clone()
+        token_ids = self.generate_text(model, encoded_text, context_size, tokenizer)
+        # token_ids = token_ids.to(device=device).detach().clone()
 
         decoded_text = self.token_to_text(token_ids, tokenizer)
         print("model output:- ")
@@ -183,15 +201,14 @@ class LCQUADModel:
         print("======================")
 
 
-    def inference_instruction_model(self, test_text):
+    def inference_lcquad_model(self, test_text):
 
         model_ind = self.config["model"]["chosen_model"]
         model_path = self.config['model']['inf_model_path'].replace("{model_ind}", f"{model_ind}")
-        instruction_model = self.load_lcquad_model(model_path)
+        lcquad_model = self.load_lcquad_model(model_path)
 
         # loading tokenizer
-        lcquad_util = LCQuadUtil()
-        tokenizer = lcquad_util.get_tokenizer(self.config["model"]["tokenizer"])
+        tokenizer = LCQuadUtil.get_tokenizer(self.config)
 
         device = self.config['model']['device']
-        self.predict_ans(test_text, tokenizer, instruction_model, device)
+        self.predict_ans(test_text, tokenizer, lcquad_model, device)

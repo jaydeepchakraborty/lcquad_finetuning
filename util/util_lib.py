@@ -19,6 +19,8 @@ import re
 import tiktoken
 from transformers import GPT2Tokenizer
 
+from transformers import GPT2LMHeadModel
+
 import tensorflow as tf
 
 import torch
