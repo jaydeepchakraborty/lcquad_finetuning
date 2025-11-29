@@ -28,8 +28,7 @@ class LCQUADModelHelper:
             num_batches = len(dataloader)
 
             for batch_data in dataloader:
-                # inputs_txt, targets_txt = batch_data['inputs_txt'], batch_data['targets_txt']
-                input_batch, target_batch = batch_data['inputs_tensor'], batch_data['targets_tensor']
+                input_batch, target_batch = batch_data['ip_modf_encoded_tokens'], batch_data['trgt_modf_encoded_tokens']
                 loss = self.calc_loss_batch(input_batch, target_batch, model, device)
                 total_loss += loss.item()
 
@@ -40,28 +39,68 @@ class LCQUADModelHelper:
     def train_lcquad_model(self, model, train_loader, val_loader):
 
         num_epochs = self.config['model']['num_epochs']
-        eval_freq = self.config['model']['eval_freq']
+        epoch_eval_freq = self.config['model']['epoch_eval_freq']
+        batch_eval_freq = self.config['model']['batch_eval_freq']
 
         device = self.config['model']['device']
         print(f"device:- {device}")
 
-        optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=2e-5)
+        # Enable gradient checkpointing
+        model.config.use_cache = False  # Required for checkpointing, On CPU or small GPUs
+        model.gradient_checkpointing_enable()
+
+        # Use Weight Decay but NOT on LayerNorm or Bias
+        decay, no_decay = [], []
+        for name, param in model.named_parameters():
+            if "bias" in name or "LayerNorm.weight" in name:
+                no_decay.append(param)
+            else:
+                decay.append(param)
+
+        optimizer = torch.optim.AdamW([
+            {"params": decay, "weight_decay": 0.01},
+            {"params": no_decay, "weight_decay": 0.0},
+        ], lr=5e-5)
+
+        # Use linear warmup + cosine decay (or linear decay).
+        # This dramatically improves stability and prevents catastrophic overfitting.
+        num_training_steps = num_epochs * len(train_loader)
+        num_warmup_steps = int(0.03 * num_training_steps)
+
+        scheduler = get_cosine_schedule_with_warmup(
+            optimizer,
+            num_warmup_steps=num_warmup_steps,
+            num_training_steps=num_training_steps
+        )
+
+        effective_batch_size = self.config['model']['batch_size']['effective_batch_size']  # what you WANT ~ 32
+        real_batch_size = self.config['model']['batch_size']['train_batch_size']  # what fits in RAM ~ 8
+        accum_steps = effective_batch_size // real_batch_size
 
         for epoch in range(num_epochs):
 
             model.train() # set model to training mode
             for batch_id, batch_data in enumerate(train_loader):
-                # org_txt = batch_data['org_txt']
-                # inputs_txt, targets_txt = batch_data['inputs_txt'], batch_data['targets_txt']
-                input_batch, target_batch = batch_data['inputs_tensor'].to(device), batch_data['targets_tensor'].to(device)
+                input_batch, target_batch = batch_data['ip_modf_encoded_tokens'].to(device), batch_data['trgt_modf_encoded_tokens'].to(device)
 
                 optimizer.zero_grad()
                 loss = self.calc_loss_batch(input_batch, target_batch, model, device)
-
+                loss = loss / accum_steps  # normalize loss
                 loss.backward()
-                optimizer.step()
 
-                if batch_id % eval_freq == 0:
+                """
+                you cannot increase batch size due to memory limits, gradient accumulation is the correct and standard way 
+                to reach an effective batch size large enough for stable Transformer training.
+                """
+                # Gradient Accumulation
+                if (batch_id + 1) % accum_steps == 0:
+                    # Clip Gradients
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    optimizer.step()
+                    scheduler.step()
+                    optimizer.zero_grad()
+
+                if epoch % epoch_eval_freq == 0 and batch_id % batch_eval_freq == 0:
                     train_loss = self.calc_loss_loader(train_loader, model, device)
                     val_loss = self.calc_loss_loader(val_loader, model, device)
                     print(f"Epoch:- {epoch+1} Batch ID:- {batch_id:06d} Train loss:- {train_loss:3f} Val loss:- {val_loss:3f}")
@@ -71,15 +110,36 @@ class LCQUADModelHelper:
 
     def training_model(self):
 
+        # loading the tokenizer
+        tokenizer = LCQuadUtil.get_tokenizer(self.config)
+
         # load pre-trained model
         model_loader = GPTModelLoader(self.config)
-        model_obj = model_loader.load_gpt_model()
+        model_obj = model_loader.load_gpt_model(tokenizer)
 
-        lcquad_data_loader_obj = LCQUADDataLoaderHelper(self.config)
+        lcquad_data_loader_obj = LCQUADDataLoaderHelper(tokenizer, self.config)
 
         dataset_file_path = self.config['data']["train_dataset"]
         train_dataloader_obj = lcquad_data_loader_obj.load_dataloader("train", dataset_file_path)
         print(f"train dataloader batches:- {len(train_dataloader_obj)}")
+
+        for batch_id, batch_data in enumerate(train_dataloader_obj):
+            org_txt = batch_data['org_txt']
+            ip_encoded_text, ip_encoded_tokens = batch_data['ip_encoded_text'], batch_data['ip_encoded_tokens']
+            ip_modf_encoded_text, ip_modf_encoded_tokens = batch_data['ip_modf_encoded_text'], batch_data['ip_modf_encoded_tokens']
+            trgt_encoded_text, trgt_encoded_tokens = batch_data['trgt_encoded_text'], batch_data['trgt_encoded_tokens']
+            trgt_modf_encoded_text, trgt_modf_encoded_tokens = batch_data['trgt_modf_encoded_text'], batch_data['trgt_modf_encoded_tokens']
+
+            print(f"org_txt\n {org_txt}")
+            print(f"ip_encoded_text\n {ip_encoded_text}")
+            print(f"ip_encoded_tokens\n {ip_encoded_tokens}")
+            print(f"ip_modf_encoded_text\n {ip_modf_encoded_text}")
+            print(f"ip_modf_encoded_tokens\n {ip_modf_encoded_tokens}")
+            print(f"trgt_encoded_text\n {trgt_encoded_text}")
+            print(f"trgt_encoded_tokens\n {trgt_encoded_tokens}")
+            print(f"trgt_modf_encoded_text\n {trgt_modf_encoded_text}")
+            print(f"trgt_modf_encoded_tokens\n {trgt_modf_encoded_tokens}")
+            break
 
         dataset_file_path = self.config['data']["val_dataset"]
         val_dataloader_obj = lcquad_data_loader_obj.load_dataloader("val", dataset_file_path)
@@ -114,7 +174,10 @@ class LCQUADModelHelper:
 
     def test_lcquad_model(self):
 
-        lcquad_data_loader_obj = LCQUADDataLoaderHelper(self.config)
+        # loading the tokenizer
+        tokenizer = LCQuadUtil.get_tokenizer(self.config)
+
+        lcquad_data_loader_obj = LCQUADDataLoaderHelper(tokenizer, self.config)
 
         dataset_file_path = self.config['data']["test_dataset"]
         test_dataloader_obj = lcquad_data_loader_obj.load_dataloader("test", dataset_file_path)
@@ -140,26 +203,26 @@ class LCQUADModelHelper:
         output_text = tokenizer.decode(token_ids[0], skip_special_tokens=True)
         return output_text
 
-    def generate_text(self, model, input_ids, context_size, tokenizer, max_new_tokens=60):
+    def generate_text(self, model, input_ids, context_size, tokenizer):
 
-        # input_ids_truncated = input_ids[:, -context_size:]
+        # the maximum number of tokens the model is allowed to generate during inference.
+        max_new_tokens = 200
+        input_ids_truncated = input_ids[:, -context_size:]
 
-        print("input_ids")
-        print(input_ids)
+        attention_mask = (input_ids_truncated != tokenizer.pad_token_id).long()
 
-        attention_mask = (input_ids != tokenizer.pad_token_id).long()
+        print(tokenizer.pad_token_id)
+        print(tokenizer.eos_token_id)
 
         with torch.no_grad():
             output_ids = model.generate(
-                input_ids=input_ids,
+                input_ids=input_ids_truncated,
                 attention_mask=attention_mask,
                 max_new_tokens=max_new_tokens,
-                pad_token_id=tokenizer.eos_token_id,
-                eos_token_id=tokenizer.pad_token_id,
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+                do_sample=False
             )
-
-        print("output_ids")
-        print(output_ids)
 
         return output_ids
 
@@ -174,28 +237,37 @@ class LCQUADModelHelper:
         return sparql
 
     def predict_ans(self, context_data, tokenizer, model, device):
-        model.eval()
+
 
         strt_context = LCQuadUtil.format_entry(context_data, "test")
 
-        print("start context:-")
+        print("User QUERY:-")
         print(strt_context)
         print("===========================")
 
-        context_size = 1024
-        encoded_text = self.text_to_token(strt_context, tokenizer).to(device=device)
+        context_size = self.config['model']['gpt_config']['basic_config']['allowed_max_length']
+        encoded_tokens = self.text_to_token(strt_context, tokenizer).to(device=device)
 
-        token_ids = self.generate_text(model, encoded_text, context_size, tokenizer)
+        print("encoded_tokens:-")
+        print(encoded_tokens)
+        print("===========================")
+
+        model.eval()
+        model_op_token_ids = self.generate_text(model, encoded_tokens, context_size, tokenizer)
         # token_ids = token_ids.to(device=device).detach().clone()
 
-        decoded_text = self.token_to_text(token_ids, tokenizer)
-        print("model output:- ")
-        print(decoded_text)
+        print("model_op_token_ids:-")
+        print(model_op_token_ids)
+        print("===========================")
+
+        model_op_text = self.token_to_text(model_op_token_ids, tokenizer)
+        print("model_op_text:- ")
+        print(model_op_text)
         print("======================")
 
-        sparql = self.get_sparql(decoded_text)
-        print("sparql output:- ")
-        print(sparql)
+        model_op_sparql = self.get_sparql(model_op_text)
+        print("model_op_sparql output:- ")
+        print(model_op_sparql)
         print("\noriginal sparql:-")
         print(context_data['org_sparql'])
         print("======================")

@@ -1,0 +1,4 @@
+{'org_text': 'Question: Name the tributary situated on lake Saint Martin.\n<SPARQL>\n SELECT ?answer WHERE { wd:ENTITY_Q25596 wdt:ENTITY_P206 ?X . ?X wdt:ENTITY_P974 ?answer}',
+
+  'encoded_text': [24361, 25, 6530, 262, 256, 2455, 560, 22765, 319, 13546, 9281, 5780, 13, 198, 50257, 198, 33493, 5633, 41484, 33411, 1391, 220, 52801, 220, 72826, 5633, 55, 764, 5633, 55, 220, 54296, 5633, 41484, 92],
+  'decoded_text': ['Question', ':', ' Name', ' the', ' t', 'ribut', 'ary', ' situated', ' on', ' lake', ' Saint', ' Martin', '.', '\n', '<SPARQL>', '\n', ' SELECT', ' ?', 'answer', ' WHERE', ' {', ' ', 'wd:ENTITY_Q25596', ' ', 'wdt:ENTITY_P206', ' ?', 'X', ' .', ' ?', 'X', ' ', 'wdt:ENTITY_P974', ' ?', 'answer', '}']}

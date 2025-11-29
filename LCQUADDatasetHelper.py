@@ -7,9 +7,10 @@ class LCQUADDatasetHelper:
     def __init__(self, config: dict):
         self.config = config
 
-    def populate_labels(self, eid: int, e_ids_len: int):
-        padded_zero =  len(str(e_ids_len)) - len(str(eid))
-        return "ENTITY_"+padded_zero*"0"+str(eid)
+    def populate_labels(self, eid: str):
+        prefix, identifier = eid.split(":")  # extract prefix & id
+        label = f"{prefix}:ENTITY_{identifier}"
+        return label
 
     def save_mapping_id(self):
         train_df = pd.read_csv(self.config['data']['train_data'])
@@ -19,34 +20,36 @@ class LCQUADDatasetHelper:
 
         df = pd.concat([train_df, test_df], axis=0, ignore_index=True)
 
-        eid_pattern = re.compile(r'[a-zA-Z]+:[a-zA-Z]+\d+')
+        # Regex that returns full strings like "wd:Q188920", "wdt:P31", "ps:P27"
+        eid_pattern = re.compile(r'\b(?:wd|wdt|p|ps):[A-Za-z]\d+\b')
 
         eids = set()
         for sparql in df['sparql_wikidata'].dropna():
             eids.update(eid_pattern.findall(sparql))
 
-        e_ids_len = len(eids)
-        eid_label_map = {"ENTITY_UNK": "ENTITY_"+len(str(e_ids_len))*"0"}
-        label_eid_map = {"ENTITY_"+len(str(e_ids_len))*"0": "ENTITY_UNK"}
-        e_idx = 1
+        eid_label_map = {"ENTITY_UNK": "ENTITY_0"}
+        label_eid_map = {"ENTITY_0": "ENTITY_UNK"}
 
-        new_token = set()
-        new_token.add("ENTITY_00000")
-        new_token.add("SPARQL")
-        for eid in tqdm(eids, desc="ENTITY_ID fetching"):
-            label = self.populate_labels(e_idx, e_ids_len)
+        new_tokens = set()
+        new_tokens.add("ENTITY_0")
+        new_tokens.add("<SPARQL>")
+        for eid in tqdm(eids, desc="ENTITY_ID transforming"):
+            label = self.populate_labels(eid)
             eid_label_map[eid] = label
             label_eid_map[label] = eid
-            new_token.add(label)
-            e_idx += 1
+            new_tokens.add(label)
 
-        new_token = list(new_token)
+        new_token_lst = list(new_tokens)
+        print(f"total new tokens:- {len(new_token_lst)}")
+        # ["wd:ENTITY_Q188920", "wdt:ENTITY_P31"]
         with open(self.config['data']['new_token'], "w") as f:
-            json.dump(new_token, f, indent=2)
+            json.dump(new_token_lst, f, indent=2)
 
+        # eid_label_map: ["wd:Q188920": "wd:ENTITY_Q188920", "wdt:P31": "wdt:ENTITY_P31"]
         with open(self.config['data']['sparql_wikidata_eids_labels_mapping'], "w") as f:
             json.dump(eid_label_map, f, indent=2)
 
+        # label_eid_map: ["wd:ENTITY_Q188920": "wd:Q188920", "wdt:ENTITY_P31": "wdt:P31"]
         with open(self.config['data']['sparql_wikidata_labels_eids_mapping'], "w") as f:
             json.dump(label_eid_map, f, indent=2)
 
@@ -66,7 +69,9 @@ class LCQUADDatasetHelper:
 
     def modf_entity_ids_helper(self, df, eid_lbl_mapping):
 
-        eid_pattern = re.compile(r'[a-zA-Z]+:[a-zA-Z]+\d+')
+        # replacement_dict : ["wd:Q188920": "wd:ENTITY_Q188920", "wdt:P31": "wdt:ENTITY_P31"]
+
+        eid_pattern = re.compile(r'\b(?:wd|wdt|p|ps):[A-Za-z]\d+\b')
 
         def modf_entity_ids(text, replacement_dict):
             matches = set(eid_pattern.findall(text))  # unique IDs in string
@@ -74,6 +79,9 @@ class LCQUADDatasetHelper:
                 if match in replacement_dict:
                     pattern = r'\b' + re.escape(match) + r'\b'
                     text = re.sub(pattern, replacement_dict[match], text)
+                else:
+                    print(f"{match} is not in replacement_dict ~ eid_label_map")
+                    text = replacement_dict['ENTITY_UNK']
             return text
 
         df["sparql_modf"] = df["sparql"].apply(lambda x: modf_entity_ids(x, eid_lbl_mapping))
@@ -100,6 +108,8 @@ class LCQUADDatasetHelper:
 
     def modf_lcquad_data(self):
 
+        # loading eid-lbl mapping tbls
+        # eid_label_map: ["wd:Q188920": "wd:ENTITY_Q188920", "wdt:P31": "wdt:ENTITY_P31"]
         eid_lbl_mapping = self.load_eid_lbl_mapping_id()
 
         train_df = pd.read_csv(self.config['data']['train_data'])
@@ -126,13 +136,17 @@ class LCQUADDatasetHelper:
         return
 
     def populate_dataset(self, json_file, tokenizer):
+        print(f"populated dataset from:- {json_file}")
         dataset = LCQUADDataset(json_file, tokenizer)
         return dataset
 
     def save_dataset(self, data_set, dataset_path):
+        print(f"dataset saved at {dataset_path}")
         torch.save(data_set, dataset_path)
+        return
 
     def load_dataset(self, dataset_file_path):
+        print(f"loading dataset from:- {dataset_file_path}")
         with torch.serialization.safe_globals([LCQUADDataset]):
             dataset = torch.load(dataset_file_path, weights_only=False)
 
@@ -140,14 +154,16 @@ class LCQUADDatasetHelper:
 
     def prepare_data(self):
         # Step-1: saving mapped ids
-        self.save_mapping_id()
+        # self.save_mapping_id()
 
         # Step-2: modify data (SPARQL ENTRY)
-        self.modf_lcquad_data()
+        # self.modf_lcquad_data()
 
-        # Step-3: populate dataset (torch)
-        new_tokens = self.get_new_token_lst()
+        # Step-3: populate tokenizer (torch)
+        # new_tokens = self.get_new_token_lst()
         # LCQuadUtil.save_tokenizer(new_tokens, self.config)
+
+        # Step-4: populate dataset (torch)
         tokenizer = LCQuadUtil.get_tokenizer(self.config)  # loading tokenizer
 
         file_path = self.config['data']['modf_train_data']

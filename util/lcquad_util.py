@@ -18,30 +18,34 @@ class LCQuadUtil:
 
     @staticmethod
     def save_tokenizer(new_tokens, conf):
+        print(f"loading tokenizer: {conf['model']['tokenizer']}")
         tokenizer = GPT2Tokenizer.from_pretrained(conf['model']['tokenizer'])
+        print(f"pre-modified tokenizer {conf['model']['tokenizer']} with length {len(tokenizer)}")
+        special = {"additional_special_tokens": ["<SPARQL>"], "pad_token": "<PAD>"}  # also add PAD if needed
+        tokenizer.add_special_tokens(special)
         tokenizer.add_tokens(new_tokens)
-        tokenizer.pad_token = tokenizer.eos_token # <|endoftext|>
-        tokenizer.pad_token_id = tokenizer.eos_token_id  # usually 50256
+        print(f"post-modified tokenizer {conf['model']['tokenizer']} with length {len(tokenizer)}")
         tokenizer.save_pretrained(conf["model"]["tokenizer_path"])
+        print(f"saved tokenizer {conf['model']['tokenizer_path']}")
 
     @staticmethod
     def get_tokenizer(conf):
+        print(f"loading tokenizer: {conf['model']['tokenizer_path']} - START")
         tokenizer = GPT2Tokenizer.from_pretrained(conf["model"]["tokenizer_path"])
+        print(f"loading tokenizer: {conf['model']['tokenizer_path']} - FINISH")
         return tokenizer
 
     @staticmethod
     def format_entry(entry, ind):
-        instruction_text = (
-            f"Question → SPARQL:"
-        )
+        instruction_text = ""
 
-        question = f"\nQuestion: {entry['question']}" if entry["question"] else ""
+        question = f"Question: {entry['question']}\n" if entry["question"] else ""
 
         if ind == "train":
-            sparql = f"\nSPARQL: {entry['sparql_modf']}" if entry["sparql_modf"] else ""
+            sparql = f"<SPARQL>\n {entry['sparql_modf']}" if entry["sparql_modf"] else ""
             ip_txt = instruction_text + question + sparql
         elif ind == "test":
-            ip_txt = instruction_text + question
+            ip_txt = instruction_text + question + "<SPARQL>\n "
         else:
             raise NotImplementedError
 

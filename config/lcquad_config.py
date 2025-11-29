@@ -33,21 +33,22 @@ class LCQuadConfig:
                     "name": "gpt2-transformer",
                     "basic_config": {
                         "allowed_max_length": 1024, # context length
-                        "pad_token_id": 50256, # <|endoftext|>
                         "ignore_index": -100
                     },
                 },
                 "device": None,
                 "num_workers": 0,
                 "batch_size": {
+                    "effective_batch_size": 32, # Gradient Accumulation Code
                     "train_batch_size": 8,
                     "test_batch_size": 4,
                     "val_batch_size": 4,
                 },
                 "model_path": MODEL_PATH + "lcquad_model_{model_ind}_" + str(timestamp_str),
                 "inf_model_path": MODEL_PATH + "lcquad_model_{model_ind}",
-                "num_epochs": 10,
-                "eval_freq": 500,
+                "num_epochs": 50,
+                "epoch_eval_freq": 5,
+                "batch_eval_freq": 500,
             }
         }
         return

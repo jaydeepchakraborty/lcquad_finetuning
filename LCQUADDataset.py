@@ -16,12 +16,12 @@ class LCQUADDataset(Dataset):
         encoded_tokens = self.tokenizer.encode(format_entry)
 
         # Decode each token ID back into its original text chunk
-        decoded_tokens = [self.tokenizer.decode([token_id]) for token_id in encoded_tokens]
+        encoded_text = [self.tokenizer.decode([token_id]) for token_id in encoded_tokens]
 
         format_data = {
             "org_text": format_entry,
-            "encoded_text": encoded_tokens,
-            "decoded_text": decoded_tokens,
+            "encoded_text": encoded_text,
+            "encoded_tokens": encoded_tokens,
         }
 
         return format_data

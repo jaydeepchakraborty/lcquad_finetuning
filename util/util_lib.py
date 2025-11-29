@@ -20,6 +20,7 @@ import tiktoken
 from transformers import GPT2Tokenizer
 
 from transformers import GPT2LMHeadModel
+from transformers import get_cosine_schedule_with_warmup
 
 import tensorflow as tf
 
