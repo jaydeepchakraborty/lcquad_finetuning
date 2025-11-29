@@ -32,10 +32,10 @@ def main():
     lcquad_model_helper_obj = LCQUADModelHelper(lcquad_conf)
 
     # training gpt model (LCQUAD)
-    # lcquad_model_helper_obj.training_model()
+    lcquad_model_helper_obj.training_model()
 
     # test on trained model (LCQUAD)
-    # lcquad_model_helper_obj.test_lcquad_model()
+    lcquad_model_helper_obj.test_lcquad_model()
 
     # inference on trained model (LCQUAD)
     test_text = {
