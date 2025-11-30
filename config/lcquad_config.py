@@ -46,7 +46,7 @@ class LCQuadConfig:
                 },
                 "model_path": MODEL_PATH + "lcquad_model_{model_ind}_" + str(timestamp_str),
                 "inf_model_path": MODEL_PATH + "lcquad_model_{model_ind}",
-                "num_epochs": 50,
+                "num_epochs": 30,
                 "epoch_eval_freq": 5,
                 "batch_eval_freq": 500,
             }

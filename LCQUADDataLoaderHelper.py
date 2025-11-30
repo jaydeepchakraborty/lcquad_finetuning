@@ -86,7 +86,7 @@ class LCQUADDataLoaderHelper:
             trgt_encoded_tokens_lst.append(trgt_encoded_tokens)
 
             # ---------- 3b. TARGET TOKENS (Modified) ----------
-            trgt_encoded_modf_tokens = torch.tensor(ip_encoded_modf_tokens).clone()
+            trgt_encoded_modf_tokens = torch.tensor(ip_encoded_modf_tokens).detach().clone()
             trgt_encoded_modf_tokens[:-1] = trgt_encoded_modf_tokens[1:].clone() # Shift: targets to right by one level
             trgt_encoded_modf_tokens[-1] = ignore_index  # last label undefined
 

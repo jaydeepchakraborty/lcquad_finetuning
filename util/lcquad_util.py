@@ -1,3 +1,5 @@
+from sympy.integrals.intpoly import strip
+
 from lcquad_finetuning.util.util_lib import *
 
 
@@ -36,16 +38,25 @@ class LCQuadUtil:
         return tokenizer
 
     @staticmethod
+    def normalize_text(text):
+        if not text:
+            return ""
+        text = text.strip()
+        text = re.sub(r'\r', '', text)  # remove windows CR
+        text = re.sub(r'^[ \t]+', '', text, flags=re.MULTILINE)  # remove indent
+        return text
+
+    @staticmethod
     def format_entry(entry, ind):
         instruction_text = ""
 
-        question = f"Question: {entry['question']}\n" if entry["question"] else ""
+        question = f"Question: {LCQuadUtil.normalize_text(entry['question'])}\n" if entry["question"] else ""
 
         if ind == "train":
-            sparql = f"<SPARQL>\n {entry['sparql_modf']}" if entry["sparql_modf"] else ""
+            sparql = f"<SPARQL>\n{LCQuadUtil.normalize_text(entry['sparql_modf'])}" if entry["sparql_modf"] else ""
             ip_txt = instruction_text + question + sparql
         elif ind == "test":
-            ip_txt = instruction_text + question + "<SPARQL>\n "
+            ip_txt = instruction_text + question + "<SPARQL>\n"
         else:
             raise NotImplementedError
 
