@@ -91,7 +91,7 @@ class LCQUADDatasetHelper:
     def modf_ids_entity_helper(self, query, lbl_eid_mapping):
 
         # 1. Extract all entity identifiers from the query
-        entities = re.findall(r"\bENTITY_\d+\b", query)
+        entities = re.findall(r'\b(?:wd|wdt|p|ps):[A-Za-z_]+\d+\b', query)
 
         # 2. Replace each entity with its value (if found in dict)
         for entity in entities:
