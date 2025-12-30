@@ -1,0 +1,25 @@
+model_path: "/Volumes/Jay_4TB/model_utils/models/LC_Quad/"
+
+model:
+  chosen_model: "Qwen/Qwen2.5-1.5B"
+  tokenizer: "Qwen/Qwen2.5-1.5B"
+  tokenizer_path: "{{ model_path }}lcquad_tokenizer_{model_ind}"
+  gpt_config:
+    basic_config:
+      allowed_max_length: 1024
+      ignore_index: -100
+  device: "cpu"
+  num_workers: 0
+  batch_size:
+    effective_batch_size: 32
+    train_batch_size: 8
+    test_batch_size: 4
+    val_batch_size: 4
+  base_model_path: "{{ model_path }}base_model_{model_ind}"
+  clm_model_path: "{{ model_path }}lcquad_clm_model_{model_ind}/{model_version}"
+  sft_model_path: "{{ model_path }}lcquad_sft_model_{model_ind}/{model_version}"
+  rm_model_path: "{{ model_path }}lcquad_rm_model_{model_ind}/{model_version}"
+  rlhf_model_path: "{{ model_path }}lcquad_rlhf_model_{model_ind}/{model_version}"
+  inf_model_path: "{{ model_path }}lcquad_model_{model_ind}"
+  num_epochs: 10
+  epoch_eval_freq: 2

@@ -1,0 +1,40 @@
+{
+  'data': {
+    'train_data': '/Volumes/Jay_4TB/data/LC_Quad/train.csv',
+    'test_data': '/Volumes/Jay_4TB/data/LC_Quad/test.csv',
+    'sparql_wikidata_eids_labels_mapping': '/Volumes/Jay_4TB/data/LC_Quad/sparql_wikidata_eid_label_map.json',
+    'sparql_wikidata_labels_eids_mapping': '//Volumes/Jay_4TB/data/LC_Quad/sparql_wikidata_label_eid_map.json',
+    'new_token': '/Volumes/Jay_4TB/data/LC_Quad/new_token.json',
+    'modf_train_data': '/Volumes/Jay_4TB/data/LC_Quad/modf_train_data.csv',
+    'modf_valid_data': '/Volumes/Jay_4TB/data/LC_Quad/modf_valid_data.csv',
+    'modf_test_data': '/Volumes/Jay_4TB/data/LC_Quad/modf_test_data.csv',
+    'train_dataset': '/Volumes/Jay_4TB/data/LC_Quad/train_dataset.pt',
+    'val_dataset': '/Volumes/Jay_4TB/data/LC_Quad//valid_dataset.pt',
+    'test_dataset': '/Volumes/Jay_4TB/data/LC_Quad/test_dataset.pt'
+  },
+  'model': {
+    'chosen_model': 'gpt2',
+    'tokenizer': 'gpt2',
+    'tokenizer_path': '/Volumes/Jay_4TB/model_utils/models/LC_Quad/lcquad_tokenizer',
+    'gpt_config': {
+      'name': 'gpt2-transformer',
+      'basic_config': {
+        'allowed_max_length': 1024,
+        'ignore_index': -100
+      }
+    },
+    'device': 'cpu',
+    'num_workers': 0,
+    'batch_size': {
+      'effective_batch_size': 32,
+      'train_batch_size': 8,
+      'test_batch_size': 4,
+      'val_batch_size': 4
+    },
+    'model_path': '/Volumes/Jay_4TB/model_utils/models/LC_Quad/lcquad_model_gpt2_YR-2025_MM-11_DD-30_HR-19_M-48_SEC-40',
+    'inf_model_path': '/Volumes/Jay_4TB/model_utils/models/LC_Quad/lcquad_model_gpt2',
+    'num_epochs': 30,
+    'epoch_eval_freq': 5,
+    'batch_eval_freq': 500
+  }
+}

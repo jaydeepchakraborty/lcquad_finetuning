@@ -1,0 +1,15 @@
+data_path: "/Volumes/Jay_4TB/data/LC_Quad/"
+
+data:
+  init_train_data: "{{ data_path }}train.csv"
+  init_test_data: "{{ data_path }}test.csv"
+  base_train_data: "{{ data_path }}base_train.csv"
+  base_test_data: "{{ data_path }}base_test.csv"
+  lcquad_token: "{{ data_path }}lcquad_token.json"
+  modf_train_data: "{{ data_path }}modf_train_data.csv"
+  modf_valid_data: "{{ data_path }}modf_valid_data.csv"
+  modf_test_data: "{{ data_path }}modf_test_data.csv"
+  train_dataset: "{{ data_path }}train_dataset.pt"
+  val_dataset: "{{ data_path }}valid_dataset.pt"
+  test_dataset: "{{ data_path }}test_dataset.pt"
+  clm_train_dataset: "{{ data_path }}train_clm_dataset.pt"

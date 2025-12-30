@@ -4,71 +4,68 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 
 from util.util_lib import *
-from lcquad_finetuning.LCQUADDatasetHelper import LCQUADDatasetHelper
 from lcquad_finetuning.config.lcquad_config import LCQuadConfig
-from lcquad_finetuning.LCQUADModelHelper import LCQUADModelHelper
+from lcquad_finetuning.util.lcquad_logger import LCQuadLogger
+from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
+from lcquad_finetuning.model.clm.lcquad_clm_modelhelper import LCQUADCLMMODELHelper
+from lcquad_finetuning.model.sft.lcquad_sft_modelhelper import LCQUADSFTMODELHelper
+
 
 def main():
     # Setting RANDOM SEED
     torch.manual_seed(123)
     np.random.seed(123)
 
-    # Step-0 loading config
+    ########################################################
+    # Step-0
+    # loading config, loading logger, initilize lcquad
+    ########################################################
     lcquad_conf_obj = LCQuadConfig()
-    lcquad_conf = lcquad_conf_obj.get_config()
+    lcquad_conf = lcquad_conf_obj.load_config()
+
+    lcquad_log_obj = LCQuadLogger(lcquad_conf)
+    lcquad_log = lcquad_log_obj.get_logger()
+
+    # lcquad_init = LCQuadInit(lcquad_conf, lcquad_log)
+    # lcquad_init.lcquad_init()
+    ########################################################
+
 
     ########################################################
     # Step-1
     # preparing dataset (LCQUAD)
     ########################################################
-    # lcquaddataset_helper = LCQUADDatasetHelper(lcquad_conf)
-    # lcquaddataset_helper.prepare_data()
+    # lcquaddata_helper = LCQUADDataHelper(lcquad_conf, lcquad_log)
+    # lcquaddata_helper.preprocess_data()
+    # lcquaddata_helper.populate_clm_dataset()
+    # lcquaddata_helper.populate_dataset()
     ########################################################
+
 
     ########################################################
     # STEP-2
-    # training, testing, inference LCQUAD model (GPT-2 model)
-    #######################################################
-    lcquad_model_helper_obj = LCQUADModelHelper(lcquad_conf)
+    # CLM (Causal Language Model) LCQUAD model
+    # domain adaptive pretraining
+    ########################################################
+    # lcquad_clm_model_helper = LCQUADCLMMODELHelper(lcquad_conf, lcquad_log)
+    # lcquad_clm_model_helper.training_lcquad_clm_model()
+    ########################################################
 
-    # training gpt model (LCQUAD)
-    # lcquad_model_helper_obj.training_model()
+
+    ########################################################
+    # STEP-3
+    # training, testing, inference LCQUAD model (SFT)
+    #######################################################
+    lcquad_sft_model_helper = LCQUADSFTMODELHelper(lcquad_conf, lcquad_log)
+
+    # training model
+    lcquad_sft_model_helper.training_lcquad_sft_model()
 
     # test on trained model (LCQUAD)
-    # lcquad_model_helper_obj.test_lcquad_model()
+    # lcquadmodel_helper.test_lcquad_model()
+    #######################################################
 
-    # inference on trained model (LCQUAD)
-    test_text = {
-        "question": "Which languages does Odia speak?",
-        "org_sparql": "SELECT (COUNT(?sub) AS ?value ) { ?sub wdt:P1412 wd:Q33810 }"
-    }
-    # test_text = {
-    #     "question": "At the time of 2.61e+06, what was the population of Brasilla?",
-    #     "org_sparql": "SELECT ?value WHERE { wd:Q2844 p:P1082 ?s . ?s ps:P1082 ?x filter(contains(?x,'2.61e+06')) . ?s pq:P585 ?value}"
-    # }
-    # test_text = {
-    #     "question": "What nearby city is the twin of Dusseldorg?",
-    #     "org_sparql": "SELECT ?answer WHERE { wd:Q1718 wdt:P47 ?answer . ?answer wdt:P190 wd:Q324941}"
-    # }
-    # test_text = {
-    #     "question": "Did Billy Graham die in Montreal?",
-    #     "org_sparql": "SELECT ?value WHERE { wd:Q213550 p:P20 ?s . ?s ps:P20 wd:Q736831 . ?s pq:P131 ?value}"
-    # }
-    # test_text = {
-    #     "question": "In which region does the Rideau Canal join the Ottawa River?",
-    #     "org_sparql": "SELECT ?value WHERE { wd:Q651323 p:P403 ?s . ?s ps:P403 wd:Q60974 . ?s pq:P131 ?value}"
-    # }
-    # test_text = {
-    #     "question": "When Jean Umansky was nominated for Amelie, what award was the nomination for?",
-    #     "org_sparql": "SELECT ?obj WHERE { wd:Q484048 p:P1411 ?s . ?s ps:P1411 ?obj . ?s pq:P2453 wd:Q6171615 }"
-    # }
-    # test_text = {
-    #     "question": "Name all the superpowers of Wonder Woman.",
-    #     "org_sparql": "SELECT (COUNT(?obj) AS ?value ) { wd:Q338430 wdt:P2563 ?obj }"
-    # }
 
-    lcquad_model_helper_obj.inference_lcquad_model(test_text)
-    ########################################################
 
     return
 

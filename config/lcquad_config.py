@@ -1,61 +1,58 @@
 from lcquad_finetuning.util.util_lib import *
+
 class LCQuadConfig:
-    def __init__(self,):
 
-        current_datetime = datetime.now()
-        timestamp_str = current_datetime.strftime("YR-%Y_MM-%m_DD-%d_HR-%H_M-%M_SEC-%S")  # e.g., 2025_10_21_20_05_00
-        print(f"running for {timestamp_str}")
+    def load_yaml_with_jinja(self, path):
 
-        BASE_PATH = "/Volumes/Jay_4TB/"
-        DATA_PATH = BASE_PATH + "data/LC_Quad/"
-        MODEL_PATH = BASE_PATH + "model_utils/models/LC_Quad/"
-        # GPT_MODEL_PATH = BASE_PATH + "model_utils/models/llm/"
+        # 1. Load the raw file using Jinja
+        file_loader = FileSystemLoader(searchpath=".")
+        env = Environment(loader=file_loader)
+        template = env.get_template(path)
 
-        self.lcquad_config = {
-            "data":{
-                    "train_data": DATA_PATH + "train.csv",
-                    "test_data": DATA_PATH + "test.csv",
-                    "sparql_wikidata_eids_labels_mapping": DATA_PATH + "sparql_wikidata_eid_label_map.json",
-                    "sparql_wikidata_labels_eids_mapping": DATA_PATH + "sparql_wikidata_label_eid_map.json",
-                    "new_token": DATA_PATH + "new_token.json",
-                    "modf_train_data": DATA_PATH + "modf_train_data.csv",
-                    "modf_valid_data": DATA_PATH + "modf_valid_data.csv",
-                    "modf_test_data": DATA_PATH + "modf_test_data.csv",
-                    "train_dataset": DATA_PATH + "train_dataset.pt",
-                    "val_dataset": DATA_PATH + "valid_dataset.pt",
-                    "test_dataset": DATA_PATH + "test_dataset.pt",
-                },
-            "model": {
-                "chosen_model": "gpt2",
-                "tokenizer": "gpt2",
-                "tokenizer_path": MODEL_PATH + "lcquad_tokenizer",
-                "gpt_config": {
-                    "name": "gpt2-transformer",
-                    "basic_config": {
-                        "allowed_max_length": 1024, # context length
-                        "ignore_index": -100
-                    },
-                },
-                "device": None,
-                "num_workers": 0,
-                "batch_size": {
-                    "effective_batch_size": 32, # Gradient Accumulation Code
-                    "train_batch_size": 8,
-                    "test_batch_size": 4,
-                    "val_batch_size": 4,
-                },
-                "model_path": MODEL_PATH + "lcquad_model_{model_ind}_" + str(timestamp_str),
-                "inf_model_path": MODEL_PATH + "lcquad_model_{model_ind}",
-                "num_epochs": 30,
-                "epoch_eval_freq": 5,
-                "batch_eval_freq": 500,
-            }
-        }
-        return
+        # Step 2 — First render (variables unresolved, but YAML readable)
+        first_pass = template.render()
 
-    def get_config(self,):
+        # Step 3 — Load YAML → get variables
+        data = yaml.safe_load(first_pass)
 
-        # self.lcquad_config['model']['device'] = torch.device("mps" if torch.mps.is_available() else "cpu")
-        self.lcquad_config['model']['device'] = "cpu"
+        # Step 4 — Render AGAIN using YAML variables
+        second_pass = template.render(**data)
 
-        return self.lcquad_config
+        # Step 5 — Now load final expanded YAML
+        return yaml.safe_load(second_pass)
+
+    """
+    Loads a YAML file and renders any Jinja2 templates inside it.
+    """
+    def load_config(self):
+        # data configuration
+        data_config = self.load_yaml_with_jinja("config/lcquad_data_config.yaml")
+        # model configuration
+        model_config = self.load_yaml_with_jinja("config/lcquad_model_config.yaml")
+
+        model_config['model']['device'] = torch.device("mps" if torch.mps.is_available() else "cpu")
+
+        model_ind = model_config['model']['chosen_model']
+        model_version = "latest"
+
+        base_model_path = model_config['model']['base_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['base_model_path'] = base_model_path
+
+        clm_model_path = model_config['model']['clm_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['clm_model_path'] = clm_model_path
+
+        sft_model_path = model_config['model']['sft_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['sft_model_path'] = sft_model_path
+
+        rm_model_path = model_config['model']['rm_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['rm_model_path'] = rm_model_path
+
+        rlhf_model_path = model_config['model']['rlhf_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['rlhf_model_path'] = rlhf_model_path
+
+        inf_model_path = model_config['model']['inf_model_path'].replace("{model_ind}", model_ind)
+        model_config['model']['inf_model_path'] = inf_model_path
+
+        config = {"data": data_config['data'], "model": model_config['model']}
+
+        return config
