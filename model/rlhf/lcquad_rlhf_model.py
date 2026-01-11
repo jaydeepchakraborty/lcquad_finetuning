@@ -9,7 +9,10 @@ class LCQUADRLHFModel:
         self.config = config
         self.logger = logger
 
-    def train_lcquad_rlhf_model(self, policy_model, policy_tokenizer, train_loader):
+    def train_lcquad_rlhf_model(self, policy_tokenizer, policy_model, ref_model, reward_model, value_model, train_dataset):
+
+        # policy_model.stop_token = policy_tokenizer.eos_token
+        # policy_model.stop_token_id = policy_tokenizer.eos_token_id
 
         # PPO configuration
         ppo_config = PPOConfig(
@@ -18,59 +21,35 @@ class LCQUADRLHFModel:
             gradient_accumulation_steps=1
         )
 
-        ref_model = copy.deepcopy(policy_model)
-        ref_model.eval()
-        for p in ref_model.parameters():
-            p.requires_grad = False
+        generation_kwargs = {
+            "max_new_tokens": 64,
+            "eos_token_id": policy_tokenizer.eos_token_id,
+            "pad_token_id": policy_tokenizer.pad_token_id,
+            "do_sample": False,
+        }
 
-        # Load your SFT policy model
         ppo_trainer = PPOTrainer(
-            config=ppo_config,
-            model=policy_model,
-            ref_model=ref_model,
-            tokenizer=policy_tokenizer
+            policy_model,
+            ref_model,
+            policy_tokenizer,
+            ppo_config,
+            reward_model=reward_model,
+            train_dataset=train_dataset,
+            value_model=value_model
         )
 
         # Iterate over your dataset with precomputed reward_score
-        for batch in train_loader:
-            prompts = batch["prompt"]
-            responses = batch["response"]
-            rewards = batch["reward"]
+        for batch in train_dataset:
+            prompts = [batch["prompt"]]
+            # responses = [batch["response"]]
+            # rewards = torch.tensor([batch["reward"]], dtype=torch.float32)
 
             ppo_trainer.step(
-                prompts,
-                responses,
-                rewards
+                prompts=prompts,
+                # responses,
+                # rewards,
+                generation_kwargs=generation_kwargs
             )
 
         return ppo_trainer
-
-    def save_lcquad_rlhf_model(self, lcquad_rlhf_model):
-
-        rlhf_model_path = self.config['model']['rlhf_model_path']
-        rlhf_model_path = rlhf_model_path.replace("latest", LCQuadUtil.get_curr_tm())
-
-        if self.config['model']['chosen_model'] == "gpt2":
-            lcquad_rlhf_model.save_pretrained(rlhf_model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            lcquad_rlhf_model.save_pretrained(rlhf_model_path)
-        else:
-            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
-            self.logger.info(msg)
-            raise LCQUADException(None, msg)
-
-        self.logger.info(f"model saved to {rlhf_model_path}")
-
-        sft_model_path = self.config['model']['sft_model_path']
-
-        if self.config['model']['chosen_model'] == "gpt2":
-            lcquad_rlhf_model.save_pretrained(sft_model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            lcquad_rlhf_model.save_pretrained(sft_model_path)
-        else:
-            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
-            self.logger.info(msg)
-            raise LCQUADException(None, msg)
-
-        self.logger.info(f"model saved to {sft_model_path}")
 

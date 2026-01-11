@@ -12,16 +12,14 @@ class LCQUADTokenizer:
 
         if self.config['model']['chosen_model'] == "gpt2":
 
-            tokenizer_path = self.config["model"]["tokenizer_path"].replace("{model_ind}",
-                                                                            f"{self.config['model']['chosen_model']}")
+            tokenizer_path = self.config["model"]["tokenizer_path"]
             self.logger.info(f"loading tokenizer: {tokenizer_path} - START")
             tokenizer = GPT2Tokenizer.from_pretrained(tokenizer_path)
             self.logger.info(f"loading tokenizer: {tokenizer_path} - FINISH")
 
         elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
 
-            tokenizer_path = self.config["model"]["tokenizer_path"].replace("{model_ind}",
-                                                                            f"{self.config['model']['chosen_model']}")
+            tokenizer_path = self.config["model"]["tokenizer_path"]
             self.logger.info(f"loading tokenizer: {tokenizer_path} - START")
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
             self.logger.info(f"loading tokenizer: {tokenizer_path} - FINISH")

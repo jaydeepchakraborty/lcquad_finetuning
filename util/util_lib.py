@@ -22,16 +22,22 @@ import sys
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+from difflib import SequenceMatcher
 
+import sacrebleu
+
+from sklearn.metrics import precision_recall_fscore_support
+
+import string
 import tiktoken
 from transformers import GPT2Tokenizer
 
 from transformers import GPT2LMHeadModel
 from transformers import get_cosine_schedule_with_warmup
-from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForLanguageModeling, Trainer, TrainingArguments, TextDataset
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, DataCollatorForLanguageModeling, Trainer, TrainingArguments, TextDataset
 from transformers import BitsAndBytesConfig
 
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, PeftModel
 from trl import PPOTrainer, PPOConfig
 
 

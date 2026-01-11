@@ -10,7 +10,7 @@ class LCQUADRLHFDataset(Dataset):
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
         return {
-            "question": row["question"],
-            "generated_sparql": row["generated_sparql"],
-            "score": torch.tensor(row["score"], dtype=torch.float32),
+            "prompt": str(row["entity"]),
+            # "response": str(row["generated_sparql"]),
+            # "reward": float(row["reward_score"]),
         }

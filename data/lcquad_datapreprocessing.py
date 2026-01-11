@@ -7,10 +7,28 @@ class LCQuadDataProcessing:
         self.config = config
         self.logger = logger
 
+    def clean_text_column(self, df, column_name):
+        # 1. Convert to lowercase for consistency
+        df[column_name] = df[column_name].str.lower()
+
+        # 2. Remove leading/trailing whitespace
+        df[column_name] = df[column_name].str.strip()
+
+        # 3. Remove punctuation
+        # string.punctuation includes !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+        lcquad_punctuation = r"""!"#$%&'()*+,-/:;<=>?@[\]^_`{|}~"""
+        df[column_name] = df[column_name].str.replace(f'[{lcquad_punctuation}]', '', regex=True)
+
+        # 4. Remove extra whitespace between words
+        df[column_name] = df[column_name].str.replace(r'\s+', ' ', regex=True).str.strip()
+
+        return df
+
     def process_data(self):
 
         train_df = pd.read_csv(self.config['data']['base_train_data'])
-        train_df["entry"] = train_df.apply(lambda x: LCQuadFormatEntry.format_entry(x, "train"), axis=1)
+        train_df = self.clean_text_column(train_df, 'question')
+        train_df["entry"] = train_df.apply(lambda x: LCQuadFormatEntry.sft_format_entry_right_pad(x, "train"), axis=1)
 
         train_df, valid_df = train_test_split(train_df, test_size=0.1, random_state=42)
         train_df.to_csv(self.config['data']['modf_train_data'], index=False)
@@ -23,7 +41,8 @@ class LCQuadDataProcessing:
                          f"valid-shape: {valid_df.shape}")
 
         test_df = pd.read_csv(self.config['data']['base_test_data'])
-        test_df["entry"] = test_df.apply(lambda x: LCQuadFormatEntry.format_entry(x, "test"), axis=1)
+        test_df = self.clean_text_column(test_df, 'question')
+        test_df["entry"] = test_df.apply(lambda x: LCQuadFormatEntry.sft_format_entry_right_pad(x, "test"), axis=1)
         test_df.to_csv(self.config['data']['modf_test_data'], index=False)
         self.logger.info(f"modified test data is saved to "
                          f"{self.config['data']['modf_test_data']}, "

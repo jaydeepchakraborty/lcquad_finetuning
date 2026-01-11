@@ -1,14 +1,20 @@
 import os
 import sys
 
+from lcquad_finetuning.inference_engine.lcquad_inf import LCQUADInfHelper
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 
 from util.util_lib import *
 from lcquad_finetuning.config.lcquad_config import LCQuadConfig
 from lcquad_finetuning.util.lcquad_logger import LCQuadLogger
+from lcquad_finetuning.init.lcquad_init import LCQuadInit
 from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
 from lcquad_finetuning.model.clm.lcquad_clm_modelhelper import LCQUADCLMMODELHelper
 from lcquad_finetuning.model.sft.lcquad_sft_modelhelper import LCQUADSFTMODELHelper
+from lcquad_finetuning.model.rm.lcquad_rm_modelhelper import LCQUADRMMODELHelper
+from lcquad_finetuning.model.vm.lcquad_vm_modelhelper import LCQUADVMMODELHelper
+from lcquad_finetuning.model.rlhf.lcquad_rlhf_modelhelper import LCQUADRLHFMODELHelper
 
 
 def main():
@@ -17,7 +23,7 @@ def main():
     np.random.seed(123)
 
     ########################################################
-    # Step-0
+    # Step-1
     # loading config, loading logger, initilize lcquad
     ########################################################
     lcquad_conf_obj = LCQuadConfig()
@@ -32,39 +38,100 @@ def main():
 
 
     ########################################################
-    # Step-1
-    # preparing dataset (LCQUAD)
+    # Step-2
+    # preprocessing dataset (LCQUAD)
     ########################################################
-    # lcquaddata_helper = LCQUADDataHelper(lcquad_conf, lcquad_log)
+    lcquaddata_helper = LCQUADDataHelper(lcquad_conf, lcquad_log)
     # lcquaddata_helper.preprocess_data()
-    # lcquaddata_helper.populate_clm_dataset()
-    # lcquaddata_helper.populate_dataset()
-    ########################################################
-
-
-    ########################################################
-    # STEP-2
-    # CLM (Causal Language Model) LCQUAD model
-    # domain adaptive pretraining
-    ########################################################
-    # lcquad_clm_model_helper = LCQUADCLMMODELHelper(lcquad_conf, lcquad_log)
-    # lcquad_clm_model_helper.training_lcquad_clm_model()
     ########################################################
 
 
     ########################################################
     # STEP-3
-    # training, testing, inference LCQUAD model (SFT)
+    # CLM (Causal Language Model) LCQUAD model
+    # domain adaptive pretraining
+    ########################################################
+    # # generate data for CLM model train
+    # lcquaddata_helper.populate_clm_dataset()
+    # lcquad_clm_model_helper = LCQUADCLMMODELHelper(lcquad_conf, lcquad_log)
+    # # training the CLM model
+    # clm_trainer = lcquad_clm_model_helper.training_lcquad_clm_model()
+    # # saving the CLM model
+    # lcquad_clm_model_helper.save_lcquad_clm_model(clm_trainer)
+    ########################################################
+
+
+    ########################################################
+    # STEP-4
+    # SFT (Supervised Finetuning) LCQUAD model
+    # training, testing instruction based finetuning
     #######################################################
-    lcquad_sft_model_helper = LCQUADSFTMODELHelper(lcquad_conf, lcquad_log)
-
-    # training model
-    lcquad_sft_model_helper.training_lcquad_sft_model()
-
-    # test on trained model (LCQUAD)
-    # lcquadmodel_helper.test_lcquad_model()
+    # # generate data for SFT model train
+    # lcquaddata_helper.populate_sft_dataset()
+    # lcquad_sft_model_helper = LCQUADSFTMODELHelper(lcquad_conf, lcquad_log)
+    # # training the SFT model
+    # sft_trainer = lcquad_sft_model_helper.training_lcquad_sft_model()
+    # # saving the SFT model
+    # lcquad_sft_model_helper.save_lcquad_sft_model(sft_trainer)
+    # # testing the SFT model
+    # lcquad_sft_model_helper.test_lcquad_sft_model()
     #######################################################
 
+
+    ########################################################
+    # STEP-5
+    # RM (Reward Model) LCQUAD model
+    # training, testing Reaward model (for feedback)
+    #######################################################
+    # # generate data for RL model train
+    # lcquad_rm_model_helper = LCQUADRMMODELHelper(lcquad_conf, lcquad_log)
+    # # generating reward model train and test data
+    # lcquad_rm_model_helper.generate_reward_ip_dataset()
+    # lcquaddata_helper.populate_rm_dataset()
+    # # training the reward model
+    # rm_model = lcquad_rm_model_helper.train_reward_model_helper()
+    # # saving the reward model
+    # lcquad_rm_model_helper.save_reward_model(rm_model)
+    #######################################################
+
+
+    ########################################################
+    # STEP-6
+    # VM (Value Model) LCQUAD model
+    # Reinforcement Learning PPO and update SFT model
+    #######################################################
+    # # generate data for VM model train
+    # lcquad_vm_model_helper = LCQUADVMMODELHelper(lcquad_conf, lcquad_log)
+    # lcquad_vm_model_helper.train_value_model_helper()
+    #######################################################
+
+
+    ########################################################
+    # STEP-7
+    # RLHF (Reinforcement Learning with HumanFeedback) LCQUAD model
+    # Reinforcement Learning PPO and update SFT model
+    #######################################################
+    # # generate data for RLHF-PPO model train
+    # lcquaddata_helper.populate_rlhf_dataset()
+    # # training the RLHF-PPO model
+    # lcquad_rlhf_model_helper = LCQUADRLHFMODELHelper(lcquad_conf, lcquad_log)
+    # rlhf_model =lcquad_rlhf_model_helper.train_policy_model()
+    # # saving the RLHF-PPO model
+    # lcquad_rlhf_model_helper.save_policy_model(rlhf_model)
+    #######################################################
+
+
+    ########################################################
+    # STEP-8
+    # Inference LCQUAD model
+    # on the final updated SFT model after RL (PPO) update
+    #######################################################
+    # generate LCQUAD test data
+    # lcquaddata_helper.populate_lcquad_inf_dataset()
+    # populating lcquad test result
+    lcquad_inf_helper = LCQUADInfHelper(lcquad_conf, lcquad_log)
+    lcquad_inf_helper.lcquad_test()
+    #######################################################
 
 
     return

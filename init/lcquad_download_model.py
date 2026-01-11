@@ -41,8 +41,7 @@ class LCQuadDownloadModel:
                    "pad_token": "<PAD>"}
         tokenizer.add_special_tokens(special)
         tokenizer.add_tokens(new_tokens)
-        tokenizer_path = self.config["model"]["tokenizer_path"].replace("{model_ind}",
-                                                                        f"{self.config['model']['chosen_model']}")
+        tokenizer_path = self.config["model"]["tokenizer_path"]
         self.logger.info(f"post-modified tokenizer {self.config['model']['tokenizer']} with length {len(tokenizer)}")
         tokenizer.save_pretrained(tokenizer_path)
         self.logger.info(f"saved tokenizer to {tokenizer_path}")
@@ -55,8 +54,7 @@ class LCQuadDownloadModel:
             self.logger.info(f'pre-trained Basemodel ind:- {self.config["model"]["chosen_model"]} START')
             model_obj = GPT2LMHeadModel.from_pretrained(self.config['model']['chosen_model'])
 
-            tokenizer_path = self.config["model"]["tokenizer_path"].replace("{model_ind}",
-                                                                            f"{self.config['model']['chosen_model']}")
+            tokenizer_path = self.config["model"]["tokenizer_path"]
             self.logger.info(f"loading tokenizer: {tokenizer_path} - START")
             tokenizer = GPT2Tokenizer.from_pretrained(tokenizer_path)
             self.logger.info(f"loading tokenizer: {tokenizer_path} - FINISH")

@@ -1,5 +1,10 @@
+from lcquad_finetuning.util.util_lib import *
 from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
 from lcquad_finetuning.model.clm.lcquad_clm_model import LCQUADCLMModel
+from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
+from lcquad_finetuning.util.lcquad_exception import LCQUADException
+from lcquad_finetuning.util.lcquad_util import LCQuadUtil
+
 
 class LCQUADCLMMODELHelper:
 
@@ -12,18 +17,62 @@ class LCQUADCLMMODELHelper:
         lcquad_train_clm_ds = lcquad_train_clm_obj.load_clm_dataset()
         return lcquad_train_clm_ds
 
+    def load_tokenizer(self):
+        lcquad_tokenizer_obj = LCQUADTokenizer(self.config, self.logger)
+        tokenizer = lcquad_tokenizer_obj.load_tokenizer()
+        return tokenizer
+
+    def load_base_model(self):
+
+        model_path = self.config['model']['base_model_path']
+        self.logger.info(f"loading model from {model_path}")
+        if self.config['model']['chosen_model'] == "gpt2":
+            model_obj = GPT2LMHeadModel.from_pretrained(model_path)
+        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
+            model_obj = AutoModelForCausalLM.from_pretrained(model_path)
+        else:
+            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
+            self.logger.info(msg)
+            raise LCQUADException(None, msg)
+
+        return model_obj
+
+    def save_lcquad_clm_model(self, lcquad_clm_model):
+
+        model_path = self.config['model']['clm_model_path']
+
+        if self.config['model']['chosen_model'] == "gpt2":
+            lcquad_clm_model.save_pretrained(model_path)
+        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+        else:
+            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
+            self.logger.info(msg)
+            raise LCQUADException(None, msg)
+
+        return
+
+
     def training_lcquad_clm_model(self):
 
         # loading training data (only sparql)
         lcquad_train_clm_ds = self.load_train_clm_dataset()
 
+        # loading the modified tokenizer
+        tokenizer = self.load_tokenizer()
+
+        # loading the base LLM model
+        base_model = self.load_base_model()
+
         lcquad_model = LCQUADCLMModel(self.config, self.logger)
         # domain adaptive pretraining
-        trainer = lcquad_model.train_lcquad_clm_model(lcquad_train_clm_ds)
-        # saving the model
-        lcquad_model.save_lcquad_clm_model(trainer)
+        trainer = lcquad_model.train_lcquad_clm_model(lcquad_train_clm_ds, tokenizer, base_model)
 
-        return
+        return trainer
 
 
 

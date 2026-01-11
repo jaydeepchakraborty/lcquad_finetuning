@@ -50,8 +50,11 @@ class LCQuadConfig:
         rlhf_model_path = model_config['model']['rlhf_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
         model_config['model']['rlhf_model_path'] = rlhf_model_path
 
-        inf_model_path = model_config['model']['inf_model_path'].replace("{model_ind}", model_ind)
-        model_config['model']['inf_model_path'] = inf_model_path
+        inf_model_path = model_config['model']['inf_model']['inf_model_path'].replace("{model_ind}", model_ind)
+        model_config['model']['inf_model']['inf_model_path'] = inf_model_path
+
+        tokenizer_path = model_config["model"]["tokenizer_path"].replace("{model_ind}", model_ind)
+        model_config['model']['tokenizer_path'] = tokenizer_path
 
         config = {"data": data_config['data'], "model": model_config['model']}
 

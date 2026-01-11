@@ -1,49 +1,97 @@
+from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
+from lcquad_finetuning.inference_engine.lcquad_calc_score import LCQuadCalcScore
+from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
+from lcquad_finetuning.util.util_lib import *
+from lcquad_finetuning.model.lcquad_modelhelper import LCQUADCLMMODELHelper
 
-# inference on trained model (LCQUAD)
-# test_text = {
-#     "question": "Which languages does Odia speak?",
-#     "org_sparql": "SELECT (COUNT(?sub) AS ?value ) { ?sub wdt:P1412 wd:Q33810 }"
-# }
-# lcquadmodel_helper.inference_lcquad_model(test_text)
+class LCQUADInfHelper:
 
+    def __init__(self, config, logger):
+        self.config = config
+        self.logger = logger
 
-# lcquad_model_helper_obj = LCQUADModelHelper(lcquad_conf)
+    def load_tokenizer(self):
+        lcquad_tokenizer_obj = LCQUADTokenizer(self.config, self.logger)
+        tokenizer = lcquad_tokenizer_obj.load_tokenizer()
+        return tokenizer
 
-# training gpt model (LCQUAD)
-# lcquad_model_helper_obj.training_model()
+    def load_lcquad_inf_model(self):
+        lcquad_modelhelper = LCQUADCLMMODELHelper(self.config, self.logger)
+        model_obj = lcquad_modelhelper.load_model("lcquad_model_inf")
+        return model_obj
 
-# test on trained model (LCQUAD)
-# lcquad_model_helper_obj.test_lcquad_model()
+    def predict_top_K_lcquad_inf_model(self, dataloader, tokenizer, model, k=1):
 
-# inference on trained model (LCQUAD)
-# test_text = {
-#     "question": "Which languages does Odia speak?",
-#     "org_sparql": "SELECT (COUNT(?sub) AS ?value ) { ?sub wdt:P1412 wd:Q33810 }"
-# }
-# test_text = {
-#     "question": "At the time of 2.61e+06, what was the population of Brasilla?",
-#     "org_sparql": "SELECT ?value WHERE { wd:Q2844 p:P1082 ?s . ?s ps:P1082 ?x filter(contains(?x,'2.61e+06')) . ?s pq:P585 ?value}"
-# }
-# test_text = {
-#     "question": "What nearby city is the twin of Dusseldorg?",
-#     "org_sparql": "SELECT ?answer WHERE { wd:Q1718 wdt:P47 ?answer . ?answer wdt:P190 wd:Q324941}"
-# }
-# test_text = {
-#     "question": "Did Billy Graham die in Montreal?",
-#     "org_sparql": "SELECT ?value WHERE { wd:Q213550 p:P20 ?s . ?s ps:P20 wd:Q736831 . ?s pq:P131 ?value}"
-# }
-# test_text = {
-#     "question": "In which region does the Rideau Canal join the Ottawa River?",
-#     "org_sparql": "SELECT ?value WHERE { wd:Q651323 p:P403 ?s . ?s ps:P403 wd:Q60974 . ?s pq:P131 ?value}"
-# }
-# test_text = {
-#     "question": "When Jean Umansky was nominated for Amelie, what award was the nomination for?",
-#     "org_sparql": "SELECT ?obj WHERE { wd:Q484048 p:P1411 ?s . ?s ps:P1411 ?obj . ?s pq:P2453 wd:Q6171615 }"
-# }
-# test_text = {
-#     "question": "Name all the superpowers of Wonder Woman.",
-#     "org_sparql": "SELECT (COUNT(?obj) AS ?value ) { wd:Q338430 wdt:P2563 ?obj }"
-# }
+       # allowed_max_length = self.config['model']["model_config"]['basic_config']['allowed_max_length']
+        allowed_max_length = 64
 
-# lcquad_model_helper_obj.inference_lcquad_model(test_text)
-########################################################
+        generated_rows = []
+        with torch.inference_mode(): # same no_grad
+            for batch_idx, batch in enumerate(dataloader):
+                input_ids = batch["ip_modf_token_ids"]
+
+                outputs = model.generate(
+                    input_ids=input_ids,
+                    max_new_tokens=allowed_max_length,
+                    do_sample=False,
+                    num_beams=k, # how many outputs are generated
+                    pad_token_id=tokenizer.pad_token_id,
+                    eos_token_id=tokenizer.eos_token_id,
+                    use_cache=True,  # Enable KV cache (faster)
+                    num_return_sequences=1,  # Only return best sequence if k=1
+                    early_stopping=True,  # Stop when all beams finish
+                )
+
+                gen_tokens = outputs[:, input_ids.size(1):]
+                gen_texts = tokenizer.batch_decode(
+                    gen_tokens,
+                    skip_special_tokens=True
+                )
+
+                for i in range(len(gen_texts)):
+                    generated_rows.append({
+                        "entity": batch["entity"][i],
+                        "question": batch["question"][i],
+                        "original_sparql": batch["sparql"][i],
+                        "generated_sparql": gen_texts[i].strip(),
+                    })
+
+                if batch_idx%500 == 0:
+                    self.logger.info(f"output generation is done for batch_idx: {batch_idx}")
+
+        generated_df = pd.DataFrame(generated_rows)
+
+        return generated_df
+
+    def calculate_score(self, lcquad_result_df):
+        lcquad_calc_score = LCQuadCalcScore(self.config, self.logger)
+        lcquad_calc_score.lcquad_gen_scores(lcquad_result_df)
+        return
+
+    def lcquad_test(self):
+
+        # loading the tokenizer
+        tokenizer = self.load_tokenizer()
+        tokenizer.padding_side = "left" # during inference default padding is left
+
+        # load inference model
+        lcquad_model = self.load_lcquad_inf_model()
+        lcquad_model.config.use_cache = True # enable KV caching during inference
+        lcquad_model.eval()
+
+        # load test data loader
+        lcquad_data_loader_obj = LCQUADDataHelper(self.config, self.logger)
+        test_dataset_file_path = self.config['data']["inf_test_dataset"]
+        test_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, test_dataset_file_path, "test", padding_ind='left')
+        self.logger.info(f"test dataloader {len(test_dataloader)}")
+
+        # generate all the outputs
+        test_generated_df = self.predict_top_K_lcquad_inf_model(test_dataloader, tokenizer, lcquad_model)
+        inf_result_data_path = self.config['data']["inf_result_data"]
+        test_generated_df.to_csv(inf_result_data_path, index=False)
+        self.logger.info(f"RM output(test) {inf_result_data_path}")
+
+        # generate scores for each test sample
+        self.calculate_score(test_generated_df)
+
+        return
