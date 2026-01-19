@@ -39,6 +39,7 @@ class RewardModel(nn.Module):
 Step 7: Save the reward model
 """
 from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
+from lcquad_finetuning.model.lcquad_modelhelper import LCQUADMODELHelper
 from lcquad_finetuning.model.rm.lcquad_rm_model import LCQUADRMModel
 from lcquad_finetuning.model.sft.lcquad_sft_modelhelper import LCQUADSFTMODELHelper
 from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
@@ -53,18 +54,30 @@ class LCQUADRMMODELHelper:
         self.config = config
         self.logger = logger
 
-    def generate_reward_ip_dataset(self):
-        # loading the trained SFT model
-        lcquad_sft_model_helper = LCQUADSFTMODELHelper(self.config, self.logger)
-        lcquad_sft_model_helper.predict_top_K_lcquad_sft_model_helper(padding_ind="left")
+    def copy_csv(self, source_filename, destination_filename):
+        # Read the CSV into a DataFrame
+        df = pd.read_csv(source_filename)
+        # Write the DataFrame to a new CSV file
+        df.to_csv(destination_filename, index=False)  # index=False prevents writing the DataFrame index as a column
+        self.logger.info(f"Successfully copied '{source_filename}' to '{destination_filename}' using pandas.")
+
+    def generate_reward_data(self):
 
         # generate reward score
+        self.copy_csv(self.config['data']['sft_train_result_data'], self.config['data']['rm_train_data'])
         lcquad_score_gen = LCQUADRMRewardScoreGenerator(self.config, self.logger)
         train_data_fl_path = self.config['data']['rm_train_data']
         train_data_df = pd.read_csv(train_data_fl_path)
         train_data_fl_path_with_reward = self.config['data']['rm_train_with_reward_score_data']
         lcquad_score_gen.generate_reward_score(train_data_df, train_data_fl_path_with_reward)
 
+        self.copy_csv(self.config['data']['sft_val_result_data'], self.config['data']['rm_val_data'])
+        test_data_fl_path = self.config['data']['rm_val_data']
+        test_data_df = pd.read_csv(test_data_fl_path)
+        test_data_fl_path_with_reward = self.config['data']['rm_val_with_reward_score_dataset']
+        lcquad_score_gen.generate_reward_score(test_data_df, test_data_fl_path_with_reward)
+
+        self.copy_csv(self.config['data']['sft_test_result_data'], self.config['data']['rm_test_data'])
         test_data_fl_path = self.config['data']['rm_test_data']
         test_data_df = pd.read_csv(test_data_fl_path)
         test_data_fl_path_with_reward = self.config['data']['rm_test_with_reward_score_data']
@@ -86,33 +99,26 @@ class LCQUADRMMODELHelper:
         train_dataloader = lcquad_data_loader_obj.load_rm_dataloader(tokenizer, dataset_file_path, "train", "right")
         self.logger.info(f"train dataloader batches:- {len(train_dataloader)}")
 
+        lcquad_data_loader_obj = LCQUADDataHelper(self.config, self.logger)
+        dataset_file_path = self.config['data']["rm_val_with_reward_score_dataset"]
+        val_dataloader = lcquad_data_loader_obj.load_rm_dataloader(tokenizer, dataset_file_path, "val", "right")
+        self.logger.info(f"val dataloader batches:- {len(val_dataloader)}")
+
         dataset_file_path = self.config['data']["rm_test_with_reward_score_dataset"]
         test_dataloader = lcquad_data_loader_obj.load_rm_dataloader(tokenizer, dataset_file_path, "test", "right")
         self.logger.info(f"test dataloader batches:- {len(test_dataloader)}")
 
-        return train_dataloader, test_dataloader
-
+        return train_dataloader, val_dataloader, test_dataloader
 
     def load_lcquad_clm_model(self):
-
-        model_path = self.config['model']['clm_model_path']
-        self.logger.info(f"loading model from {model_path}")
-
-        if self.config['model']['chosen_model'] == "gpt2":
-            model_obj = GPT2LMHeadModel.from_pretrained(model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            model_obj = AutoModelForCausalLM.from_pretrained(model_path, dtype=torch.float32, device_map=None)
-        else:
-            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
-            self.logger.info(msg)
-            raise LCQUADException(None, msg)
-
+        lcquad_modelhelper = LCQUADMODELHelper(self.config, self.logger)
+        model_obj = lcquad_modelhelper.load_model("lcquad_clm_for_rm_model")
         return model_obj
 
     def train_rm_model(self, rm_model, train_rm_dataloader, tokenizer):
 
-        effective_batch_size = self.config['model']['batch_size']['effective_batch_size']
-        real_batch_size = self.config['model']['batch_size']['train_batch_size']
+        effective_batch_size = self.config['model']['rm_model']['model_config']['batch_size']['effective_batch_size']
+        real_batch_size = self.config['model']['rm_model']['model_config']['batch_size']['train_batch_size']
         accum_steps = effective_batch_size // real_batch_size
 
         optimizer = torch.optim.AdamW(rm_model.head.parameters(), lr=1e-5)
@@ -121,21 +127,24 @@ class LCQUADRMMODELHelper:
         rm_model.train()
         optimizer.zero_grad()
 
-        num_epochs = self.config['model']['num_epochs']
+        num_epochs = self.config['model']['rm_model']['model_config']['num_epochs']
         for epoch in range(num_epochs):
             total_loss = 0.0
 
             for batch_id, batch_data in enumerate(train_rm_dataloader):
                 input_ids = batch_data['ip_padded_token_ids']
-                rewards_gt = batch_data['reward_scores'].float()
+
 
                 attention_mask = (input_ids != tokenizer.pad_token_id).long()
-
                 rewards_pred = rm_model(
                     input_ids=input_ids,
                     attention_mask=attention_mask
                 )
 
+                rewards_gt = batch_data['reward_scores'].to(
+                                                            device=rewards_pred.device,
+                                                            dtype=rewards_pred.dtype
+                                                        )
                 raw_loss = loss_fn(rewards_pred, rewards_gt)
                 loss = raw_loss / accum_steps
                 loss.backward()
@@ -155,17 +164,13 @@ class LCQUADRMMODELHelper:
     def train_reward_model_helper(self):
 
         # loading the rm dataloader
-        train_rm_dataloader, test_rm_dataloader = self.load_rm_dataloder()
+        train_rm_dataloader, val_rm_dataloader, test_rm_dataloader = self.load_rm_dataloder()
 
         # loading tokenizer
         tokenizer = self.load_tokenizer()
 
         # loading the base Causal Language model (trained on new tokens)
         clm_model = self.load_lcquad_clm_model()
-        for p in clm_model.parameters():
-            p.requires_grad = False
-        clm_model.eval()
-
         device = self.config["model"]["device"]
         rm_model_obj = LCQUADRMModel(clm_model, self.config, self.logger).to(device)
         rm_model = self.train_rm_model(rm_model_obj, train_rm_dataloader, tokenizer)
@@ -174,7 +179,7 @@ class LCQUADRMMODELHelper:
 
     def save_reward_model(self, rm_model):
         # save reward model
-        save_dir = self.config['model']['rm_model_path']
+        save_dir = self.config['model']['rm_model']['rm_model_path']
         rm_model.model.save_pretrained(save_dir)
         # save reward head
         torch.save(

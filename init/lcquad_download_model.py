@@ -37,10 +37,16 @@ class LCQuadDownloadModel:
 
         self.logger.info(f"pre-modified tokenizer {self.config['model']['tokenizer']} with length {len(tokenizer)}")
         new_tokens = self.get_new_token_lst()
+        tokenizer.add_tokens(new_tokens)
+
         special = {"additional_special_tokens": self.get_special_tokens(),
                    "pad_token": "<PAD>"}
         tokenizer.add_special_tokens(special)
-        tokenizer.add_tokens(new_tokens)
+        """
+        By default, Qwen/Qwen2.5-1.5B tokenizer use "<|endoftext|>" for padding. 
+        no need to update the "eos_token", "eos_token_id"
+        but as we need left padding (during inference), we need separate "<PAD>" token.
+        """
         tokenizer_path = self.config["model"]["tokenizer_path"]
         self.logger.info(f"post-modified tokenizer {self.config['model']['tokenizer']} with length {len(tokenizer)}")
         tokenizer.save_pretrained(tokenizer_path)

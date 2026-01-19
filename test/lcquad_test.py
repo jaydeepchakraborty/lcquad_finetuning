@@ -97,11 +97,30 @@ def analysis_tokenizer(config, logger):
     print(tokenizer.vocab_size)
     print(len(tokenizer))
 
+    print(f"BEFORE MODIFIED:")
+    print(f"PAD TOKEN: {tokenizer.pad_token}")
+    txt_arr = ['<PAD>', '<IGNORE>', '<|endoftext|>', '<SPARQL>']
+    for txt_tok in txt_arr:
+        token_id = tokenizer.convert_tokens_to_ids(txt_tok)
+        print(f"TEXT TOKEN: {txt_tok}\t TOKEN ID: {token_id}")
+
     # from path
     tokenizer_path = config["model"]["tokenizer_path"]
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     print(tokenizer.vocab_size)
     print(len(tokenizer))
+
+    print(f"AFTER MODIFIED:")
+    print(f"PAD TOKEN: {tokenizer.pad_token}")
+    txt_arr = ['<PAD>', '<IGNORE>', '<|endoftext|>', '<SPARQL>']
+    for txt_tok in txt_arr:
+        token_id = tokenizer.convert_tokens_to_ids(txt_tok)
+        print(f"TEXT TOKEN: {txt_tok}\t TOKEN ID: {token_id}")
+
+    token_ids = [151665, 151666, 151664, 151663, 151662, 151661]
+    for token_id in token_ids:
+        token_txt = tokenizer.convert_ids_to_tokens(token_id)
+        print(f"TOKEN ID: {token_id}\t TEXT TOKEN: {token_txt}\t ")
 
 def analysis_dataset(config, logger):
     # LCQUADCLMDataset
@@ -126,6 +145,17 @@ def analysis_dataloader(config, logger):
     dataset_file_path = config['data']["sft_test_dataset"]
     dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, dataset_file_path, "test")
     logger.info(f"dataloader {len(dataloader)}")
+
+def analysis_models(lcquad_conf, lcquad_log):
+    model_path = lcquad_conf['model']['base_model_path']
+    model_path = "/Volumes/Jay_4TB/model_utils/models/LC_Quad/lcquad_clm_model_Qwen/Qwen2.5-1.5B/latest"
+    model = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch.float32)
+
+    # Count parameters
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    print(f"Total: {total_params / 1e6:.1f}M | Trainable: {trainable_params / 1e6:.1f}M")
 
 
 if __name__ == "__main__":
@@ -156,3 +186,5 @@ if __name__ == "__main__":
     # analysis_dataset(lcquad_conf, lcquad_log)
 
     # analysis_dataloader(lcquad_conf, lcquad_log)
+
+    analysis_models(lcquad_conf, lcquad_log)

@@ -38,19 +38,19 @@ class LCQuadConfig:
         base_model_path = model_config['model']['base_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
         model_config['model']['base_model_path'] = base_model_path
 
-        clm_model_path = model_config['model']['clm_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
-        model_config['model']['clm_model_path'] = clm_model_path
+        clm_model_path = model_config['model']['clm_model']['clm_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['clm_model']['clm_model_path'] = clm_model_path
 
-        sft_model_path = model_config['model']['sft_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
-        model_config['model']['sft_model_path'] = sft_model_path
+        sft_model_path = model_config['model']['sft_model']['sft_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['sft_model']['sft_model_path'] = sft_model_path
 
-        rm_model_path = model_config['model']['rm_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
-        model_config['model']['rm_model_path'] = rm_model_path
+        rm_model_path = model_config['model']['rm_model']['rm_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['rm_model']['rm_model_path'] = rm_model_path
 
-        rlhf_model_path = model_config['model']['rlhf_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
-        model_config['model']['rlhf_model_path'] = rlhf_model_path
+        rlhf_model_path = model_config['model']['rlhf_model']['rlhf_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['rlhf_model']['rlhf_model_path'] = rlhf_model_path
 
-        inf_model_path = model_config['model']['inf_model']['inf_model_path'].replace("{model_ind}", model_ind)
+        inf_model_path = model_config['model']['inf_model']['inf_model_path'].replace("{model_ind}", model_ind).replace("{model_version}",model_version)
         model_config['model']['inf_model']['inf_model_path'] = inf_model_path
 
         tokenizer_path = model_config["model"]["tokenizer_path"].replace("{model_ind}", model_ind)

@@ -17,15 +17,15 @@ class LCQuadRMDataLoader:
 
         # === 1. Extract entries ===
         org_txt = [
-            LCQuadFormatEntry.rm_format_entry(item, "train") for item in batch
+            LCQuadFormatEntry.prompt_rm_format_entry(item) for item in batch
         ]
 
         reward_score_lst = [
             float(item['reward_score']) for item in batch
         ]
 
-        ignore_index = self.conf['model']['model_config']['basic_config']['ignore_index'] # -100
-        max_len = self.conf['model']['model_config']['basic_config']['allowed_max_length']
+        ignore_index = self.conf['model']['rm_model']['model_config']['ignore_index'] # -100
+        max_len = self.conf['model']['rm_model']['model_config']['allowed_max_length']
 
         # tokenizer ID
         pad_token_id = self.tokenizer.pad_token_id
@@ -72,7 +72,7 @@ class LCQuadRMDataLoader:
         reward_scores = torch.tensor(reward_score_lst, dtype=torch.float32, device=device)
 
         data_batch = {
-            "entity": org_txt,
+            "prompt": org_txt,
             "ip_org_token_ids": ip_org_token_ids,
             "ip_org_text_lst": ip_org_text_lst,
             "ip_padded_token_ids": ip_padded_token_ids,
@@ -89,13 +89,13 @@ class LCQuadRMDataLoader:
         self.tokenizer = tokenizer
         self.lcquad_tokenizer_obj = LCQUADTokenizer(self.conf, self.logger)
 
-        num_workers = self.conf['model']['num_workers']
+        num_workers = self.conf['model']['rm_model']['num_workers']
         if dataset_ind == "train":
-            batch_size = self.conf['model']['batch_size']['train_batch_size']
+            batch_size = self.conf['model']['rm_model']['model_config']['batch_size']['train_batch_size']
         elif dataset_ind == "val":
-            batch_size = self.conf['model']['batch_size']['val_batch_size']
+            batch_size = self.conf['model']['rm_model']['model_config']['batch_size']['val_batch_size']
         elif dataset_ind == "test":
-            batch_size = self.conf['model']['batch_size']['test_batch_size']
+            batch_size = self.conf['model']['rm_model']['model_config']['batch_size']['test_batch_size']
         else:
             raise NotImplementedError
 
@@ -116,13 +116,6 @@ class LCQuadRMDataLoader:
                 num_workers=num_workers
             )
         else:
-            # default
-            dataloader = DataLoader(
-                dataset,
-                batch_size=batch_size,
-                collate_fn=self.customized_right_pad_collate_fn,
-                shuffle=False,
-                num_workers=num_workers
-            )
+            raise NotImplementedError
 
         return dataloader

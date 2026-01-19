@@ -10,7 +10,5 @@ class LCQUADRLHFDataset(Dataset):
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
         return {
-            "prompt": str(row["entity"]),
-            # "response": str(row["generated_sparql"]),
-            # "reward": float(row["reward_score"]),
+            "prompt_without_response": str(row["prompt_without_response"]),
         }

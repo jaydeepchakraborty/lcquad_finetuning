@@ -1,3 +1,4 @@
+from lcquad_finetuning.model.lcquad_modelhelper import LCQUADMODELHelper
 from lcquad_finetuning.util.lcquad_util import LCQuadUtil
 from lcquad_finetuning.util.util_lib import *
 from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
@@ -18,64 +19,12 @@ class LCQUADSFTMODELHelper:
         return tokenizer
 
     def load_lcquad_clm_model(self):
-
-        model_path = self.config['model']['clm_model_path']
-        self.logger.info(f"loading model from {model_path}")
-
-        if self.config['model']['chosen_model'] == "gpt2":
-            model_obj = GPT2LMHeadModel.from_pretrained(model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            # for full supervised finetuning
-            # model_obj = AutoModelForCausalLM.from_pretrained(model_path)
-            # for QLoRA supervised finetuning
-            """
-            Apple MPS does not support 4-bit / 8-bit quantization
-            So we are doing LoRA + fp16 for mac
-            """
-            # # Load model in 4-bit
-            # bnb_config = BitsAndBytesConfig(
-            #     load_in_4bit=True,
-            #     bnb_4bit_quant_type="nf4",
-            #     bnb_4bit_compute_dtype=torch.bfloat16,
-            #     bnb_4bit_use_double_quant=True
-            # )
-            # model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-            #                                                  quantization_config=bnb_config,)
-            # Prepare for k-bit training
-            # model_obj = prepare_model_for_kbit_training(model_obj)
-            model_obj = AutoModelForCausalLM.from_pretrained(
-                model_path,
-                dtype=torch.float16,
-                device_map=None
-            )
-
-            # Attach LoRA adapters
-            lora_config = LoraConfig(
-                r=8,
-                lora_alpha=32,
-                target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],  # Qwen attention proj layers
-                lora_dropout=0.1,
-                bias="none",
-                task_type="CAUSAL_LM"
-            )
-            model_obj = get_peft_model(model_obj, lora_config)
-            for name, param in model_obj.named_parameters():
-                if "lora" in name:
-                    param.requires_grad = True
-            model_obj.print_trainable_parameters()
-            model_obj.enable_input_require_grads()
-            # Enable gradient checkpointing
-            model_obj.config.use_cache = False  # Required for checkpointing, On CPU or small GPUs
-            model_obj.gradient_checkpointing_enable() # save memory, only if OOM ( Out of Memory )
-        else:
-            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
-            self.logger.info(msg)
-            raise LCQUADException(None, msg)
-
+        lcquad_modelhelper = LCQUADMODELHelper(self.config, self.logger)
+        model_obj = lcquad_modelhelper.load_model("lcquad_clm_for_sft_model")
         return model_obj
 
     def save_lcquad_sft_model(self, lcquad_sft_model):
-        model_path = self.config['model']['sft_model_path']
+        model_path = self.config['model']['sft_model']['sft_model_path']
 
         if self.config['model']['chosen_model'] == "gpt2":
             lcquad_sft_model.save_pretrained(model_path)
@@ -92,33 +41,6 @@ class LCQUADSFTMODELHelper:
 
         return
 
-    def load_lcquad_sft_model(self):
-
-        if self.config['model']['chosen_model'] == "gpt2":
-            sft_model_path = self.config['model']['sft_model_path']
-            model_obj = GPT2LMHeadModel.from_pretrained(sft_model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            clm_model_path = self.config['model']['clm_model_path']
-            self.logger.info(f"CLM model loaded from {clm_model_path}")
-            sft_model_obj = AutoModelForCausalLM.from_pretrained(clm_model_path,
-                                                             dtype=torch.float16,
-                                                             device_map=None)
-            device = self.config['model']['device']
-            self.logger.info(f"device:- {device}")
-            sft_model_obj.to(device)
-            sft_model_path = self.config['model']['sft_model_path']
-            self.logger.info(f"SFT model loaded from {sft_model_path}")
-            model_obj = PeftModel.from_pretrained(
-                sft_model_obj,
-                sft_model_path
-            )
-        else:
-            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
-            self.logger.info(msg)
-            raise LCQUADException(None, msg)
-
-        return model_obj
-
     def training_lcquad_sft_model(self, ):
 
         # loading the tokenizer
@@ -126,11 +48,13 @@ class LCQUADSFTMODELHelper:
 
         lcquad_data_loader_obj = LCQUADDataHelper(self.config, self.logger)
         dataset_file_path = self.config['data']["sft_train_dataset"]
-        train_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, dataset_file_path, "train", "right")
+        train_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, dataset_file_path,
+                                                                      "train", "right", "prompt_with_response")
         self.logger.info(f"train dataloader batches:- {len(train_dataloader)}")
 
         dataset_file_path = self.config['data']["sft_val_dataset"]
-        val_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, dataset_file_path, "val", "right")
+        val_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, dataset_file_path,
+                                                                    "val", "right", "prompt_with_response")
         self.logger.info(f"val dataloader batches:- {len(val_dataloader)}")
 
         # training the LCQUAD model
@@ -140,13 +64,19 @@ class LCQUADSFTMODELHelper:
 
         return lcquad_sft_model
 
+    def load_lcquad_sft_model(self):
+        lcquad_modelhelper = LCQUADMODELHelper(self.config, self.logger)
+        model_obj = lcquad_modelhelper.load_model("lcquad_sft_model")
+        return model_obj
+
     def test_lcquad_sft_model(self):
         # loading the tokenizer
         tokenizer = self.load_tokenizer()
 
         dataset_file_path = self.config['data']["sft_test_dataset"]
         lcquad_data_loader_obj = LCQUADDataHelper(self.config, self.logger)
-        test_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, dataset_file_path, "test")
+        test_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, dataset_file_path,
+                                                                     "test", "right", "prompt_with_response")
         self.logger.info(f"test dataloader {len(test_dataloader)}")
 
         lcquad_model_obj = LCQUADSFTModel(self.config, self.logger)
@@ -183,15 +113,15 @@ class LCQUADSFTMODELHelper:
 
                 generated_rows.extend(
                     {
-                        "entity": e,
+                        "prompt": e,
                         "question": q,
                         "original_sparql": s,
                         "generated_sparql": g.strip(),
                     }
                     for e, q, s, g in zip(
-                        batch["entity"],
+                        batch["org_txt"],
                         batch["question"],
-                        batch["sparql"],
+                        batch["org_sparql"],
                         gen_texts
                     )
                 )
@@ -203,34 +133,48 @@ class LCQUADSFTMODELHelper:
 
         return generated_df
 
-    def predict_top_K_lcquad_sft_model_helper(self, padding_ind):
+    def predict_top_K_lcquad_sft_model_helper(self):
+
+        padding_ind = "left"
+
         # loading the tokenizer
         tokenizer = self.load_tokenizer()
-        tokenizer.padding_side = "left" # during inference default padding is left
-
+        tokenizer.padding_side = padding_ind # during inference default padding is left
+        # loading the trained SFT model
         lcquad_model = self.load_lcquad_sft_model()
         lcquad_model.config.use_cache = True # enable KV caching during inference
         lcquad_model.eval()
 
         lcquad_data_loader_obj = LCQUADDataHelper(self.config, self.logger)
 
+        # generating training output
         train_dataset_file_path = self.config['data']["sft_train_dataset"]
-        train_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, train_dataset_file_path, "train", padding_ind)
+        train_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, train_dataset_file_path,
+                                                                      "train", padding_ind, "prompt_without_response")
         self.logger.info(f"train dataloader {len(train_dataloader)}")
-
         train_generated_df = self.predict_top_K_lcquad_sft_model(train_dataloader, tokenizer, lcquad_model)
-        rm_train_data_path = self.config['data']["rm_train_data"]
-        train_generated_df.to_csv(rm_train_data_path, index=False)
-        self.logger.info(f"RM output(train) {rm_train_data_path}")
+        sft_train_result_datapath = self.config['data']["sft_train_result_data"]
+        train_generated_df.to_csv(sft_train_result_datapath, index=False)
+        self.logger.info(f"SFT output(train) {sft_train_result_datapath}")
 
+        # generating validation output
+        valid_dataset_file_path = self.config['data']["sft_val_dataset"]
+        valid_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, valid_dataset_file_path,
+                                                                      "val", padding_ind, "prompt_without_response")
+        self.logger.info(f"train dataloader {len(valid_dataloader)}")
+        valid_generated_df = self.predict_top_K_lcquad_sft_model(valid_dataloader, tokenizer, lcquad_model)
+        sft_valid_result_datapath = self.config['data']["sft_val_result_data"]
+        valid_generated_df.to_csv(sft_valid_result_datapath, index=False)
+        self.logger.info(f"SFT output(valid) {sft_valid_result_datapath}")
 
+        # generating test output
         test_dataset_file_path = self.config['data']["sft_test_dataset"]
-        test_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, test_dataset_file_path, "test", padding_ind)
+        test_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, test_dataset_file_path,
+                                                                     "test", padding_ind, "prompt_without_response")
         self.logger.info(f"test dataloader {len(test_dataloader)}")
-
         test_generated_df = self.predict_top_K_lcquad_sft_model(test_dataloader, tokenizer, lcquad_model)
-        rm_test_data_path = self.config['data']["rm_test_data"]
-        test_generated_df.to_csv(rm_test_data_path, index=False)
-        self.logger.info(f"RM output(test) {rm_test_data_path}")
+        sft_test_result_datapath = self.config['data']["sft_test_result_data"]
+        test_generated_df.to_csv(sft_test_result_datapath, index=False)
+        self.logger.info(f"SFT output(test) {sft_test_result_datapath}")
 
 

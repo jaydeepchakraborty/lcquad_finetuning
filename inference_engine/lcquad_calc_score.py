@@ -65,8 +65,8 @@ class LCQuadCalcScore:
 
     def lcquad_gen_scores(self, lcquad_result_df):
 
-        gold_col = 'gold_sparql'
-        pred_col = 'pred_sparql'
+        gold_col = 'original_sparql'
+        pred_col = 'generated_sparql'
 
         # Canonical Exact Match
         lcquad_result_df['canonical_em'] = (
@@ -92,10 +92,10 @@ class LCQuadCalcScore:
         msg = msg + f"token_recall:- {lcquad_result_df['token_recall'].mean()} \n"
         msg = msg + f"token_f1:- {lcquad_result_df['token_f1'].mean()} \n"
 
-        # Triple-Pattern Precision / Recall
+        # Triple-Pattern Precision / Recall / F1
         lcquad_result_df[['triple_precision', 'triple_recall', 'triple_f1']] = lcquad_result_df.apply(lambda r: pd.Series(self.triple_prf(
             r[gold_col], r[pred_col])), axis=1)
-        msg = msg + f'Triple-Pattern Precision / Recall \n'
+        msg = msg + f'Triple-Pattern Precision / Recall / F1 \n'
         msg = msg + f"triple_precision:- {lcquad_result_df['triple_precision'].mean()} \n"
         msg = msg + f"triple_recall:- {lcquad_result_df['triple_recall'].mean()} \n"
         msg = msg + f"triple_f1:- {lcquad_result_df['triple_f1'].mean()} \n"

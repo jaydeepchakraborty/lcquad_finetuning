@@ -7,10 +7,9 @@ from lcquad_finetuning.data.lcquad_sft_dataset import LCQUADSFTDataset
 from lcquad_finetuning.data.lcquad_sft_dataloader import LCQuadSFTDataLoader
 from lcquad_finetuning.data.lcquad_rlhf_dataset import LCQUADRLHFDataset
 from lcquad_finetuning.data.lcquad_rm_dataloader import LCQuadRMDataLoader
+from lcquad_finetuning.data.lcquad_rlhf_dataloader import LCQuadRLHFDataLoader
 from lcquad_finetuning.data.lcquad_rm_dataset import LCQUADRMDataset
 from lcquad_finetuning.data.lcquad_inf_dataset import LCQUADINFDataset
-from lcquad_finetuning.data.lcquad_vm_dataloader import LCQuadVMDataLoader
-from lcquad_finetuning.data.lcquad_vm_dataset import LCQUADVMDataset
 
 
 class LCQUADDataHelper:
@@ -93,10 +92,10 @@ class LCQUADDataHelper:
             dataset = torch.load(dataset_file_path, weights_only=False)
         return dataset
 
-    def load_sft_dataloader(self, tokenizer, dataset_file_path, data_set_ind, padding_ind):
+    def load_sft_dataloader(self, tokenizer, dataset_file_path, data_set_ind, padding_ind, col_ind):
         dataset = self.load_sft_dataset(dataset_file_path)
         lcquad_dataloader_obj = LCQuadSFTDataLoader(self.config, self.logger)
-        lcquad_dataloader = lcquad_dataloader_obj.load_sft_dataloader(tokenizer, dataset, data_set_ind, padding_ind)
+        lcquad_dataloader = lcquad_dataloader_obj.load_sft_dataloader(tokenizer, dataset, data_set_ind, padding_ind, col_ind)
         return lcquad_dataloader
     ############## SFT DATA END ##############
 
@@ -117,6 +116,11 @@ class LCQUADDataHelper:
         dataset_path = self.config['data']['rm_train_with_reward_score_dataset']
         self.save_rm_dataset(train_dataset, dataset_path)
 
+        file_path = self.config['data']['rm_val_with_reward_score_data']
+        valid_dataset = self.generate_rm_dataset(file_path)
+        dataset_path = self.config['data']['rm_val_with_reward_score_dataset']
+        self.save_rm_dataset(valid_dataset, dataset_path)
+
         file_path = self.config['data']['rm_test_with_reward_score_data']
         test_dataset = self.generate_rm_dataset(file_path)
         dataset_path = self.config['data']['rm_test_with_reward_score_dataset']
@@ -135,20 +139,6 @@ class LCQUADDataHelper:
         return lcquad_dataloader
     ############## RM DATA END ################
 
-    ############## VM DATA START ################
-    def load_vm_dataset(self, dataset_file_path):
-        self.logger.info(f"loading dataset from:- {dataset_file_path}")
-        with torch.serialization.safe_globals([LCQUADVMDataset]):
-            dataset = torch.load(dataset_file_path, weights_only=False)
-        return dataset
-
-    def load_vm_dataloader(self, tokenizer, dataset_file_path, data_set_ind, padding_ind):
-        dataset = self.load_vm_dataset(dataset_file_path)
-        lcquad_dataloader_obj = LCQuadVMDataLoader(self.config, self.logger)
-        lcquad_dataloader = lcquad_dataloader_obj.load_vm_dataloader(tokenizer, dataset, data_set_ind, padding_ind)
-        return lcquad_dataloader
-    ############## VM DATA END ##################
-
     ############## RLHF-PPO DATA START ##############
     def generate_rlhf_dataset(self, data_file):
         self.logger.info(f"populated datafile from:- {data_file}")
@@ -161,7 +151,7 @@ class LCQUADDataHelper:
         return
 
     def populate_rlhf_dataset(self):
-        file_path = self.config['data']['rm_train_with_reward_score_data']
+        file_path = self.config['data']['modf_train_data']
         train_dataset = self.generate_rlhf_dataset(file_path)
         dataset_path = self.config['data']['rlhf_train_dataset']
         self.save_rlhf_dataset(train_dataset, dataset_path)
@@ -171,6 +161,12 @@ class LCQUADDataHelper:
         with torch.serialization.safe_globals([LCQUADRLHFDataset]):
             dataset = torch.load(dataset_file_path, weights_only=False)
         return dataset
+
+    def load_rlhf_dataloader(self, tokenizer, dataset_file_path, data_set_ind, padding_ind):
+        dataset = self.load_rlhf_dataset(dataset_file_path)
+        lcquad_dataloader_obj = LCQuadRLHFDataLoader(self.config, self.logger)
+        lcquad_dataloader = lcquad_dataloader_obj.load_rlhf_dataloader(tokenizer, dataset, data_set_ind, padding_ind)
+        return lcquad_dataloader
     ############## RLHF-PPO DATA END ##############
 
     ############## LCQUAD INFERENCE DATA START ##############

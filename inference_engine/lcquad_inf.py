@@ -2,7 +2,7 @@ from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
 from lcquad_finetuning.inference_engine.lcquad_calc_score import LCQuadCalcScore
 from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
 from lcquad_finetuning.util.util_lib import *
-from lcquad_finetuning.model.lcquad_modelhelper import LCQUADCLMMODELHelper
+from lcquad_finetuning.model.lcquad_modelhelper import LCQUADMODELHelper
 
 class LCQUADInfHelper:
 
@@ -16,7 +16,7 @@ class LCQUADInfHelper:
         return tokenizer
 
     def load_lcquad_inf_model(self):
-        lcquad_modelhelper = LCQUADCLMMODELHelper(self.config, self.logger)
+        lcquad_modelhelper = LCQUADMODELHelper(self.config, self.logger)
         model_obj = lcquad_modelhelper.load_model("lcquad_model_inf")
         return model_obj
 
@@ -36,10 +36,7 @@ class LCQUADInfHelper:
                     do_sample=False,
                     num_beams=k, # how many outputs are generated
                     pad_token_id=tokenizer.pad_token_id,
-                    eos_token_id=tokenizer.eos_token_id,
-                    use_cache=True,  # Enable KV cache (faster)
-                    num_return_sequences=1,  # Only return best sequence if k=1
-                    early_stopping=True,  # Stop when all beams finish
+                    eos_token_id=tokenizer.eos_token_id
                 )
 
                 gen_tokens = outputs[:, input_ids.size(1):]
@@ -48,13 +45,20 @@ class LCQUADInfHelper:
                     skip_special_tokens=True
                 )
 
-                for i in range(len(gen_texts)):
-                    generated_rows.append({
-                        "entity": batch["entity"][i],
-                        "question": batch["question"][i],
-                        "original_sparql": batch["sparql"][i],
-                        "generated_sparql": gen_texts[i].strip(),
-                    })
+                generated_rows.extend(
+                    {
+                        "prompt_without_response": e,
+                        "question": q,
+                        "original_sparql": s,
+                        "generated_sparql": g.strip(),
+                    }
+                    for e, q, s, g in zip(
+                        batch["prompt_without_response"],
+                        batch["question"],
+                        batch["original_sparql"],
+                        gen_texts
+                    )
+                )
 
                 if batch_idx%500 == 0:
                     self.logger.info(f"output generation is done for batch_idx: {batch_idx}")
@@ -70,26 +74,28 @@ class LCQUADInfHelper:
 
     def lcquad_test(self):
 
+        padding_ind = "left"
+
         # loading the tokenizer
         tokenizer = self.load_tokenizer()
-        tokenizer.padding_side = "left" # during inference default padding is left
+        tokenizer.padding_side = padding_ind # during inference default padding is left
 
         # load inference model
         lcquad_model = self.load_lcquad_inf_model()
         lcquad_model.config.use_cache = True # enable KV caching during inference
         lcquad_model.eval()
 
-        # load test data loader
+
+        # generating test output
         lcquad_data_loader_obj = LCQUADDataHelper(self.config, self.logger)
         test_dataset_file_path = self.config['data']["inf_test_dataset"]
-        test_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, test_dataset_file_path, "test", padding_ind='left')
+        test_dataloader = lcquad_data_loader_obj.load_lcquad_inf_dataloader(tokenizer, test_dataset_file_path,
+                                                                     "test", padding_ind)
         self.logger.info(f"test dataloader {len(test_dataloader)}")
-
-        # generate all the outputs
         test_generated_df = self.predict_top_K_lcquad_inf_model(test_dataloader, tokenizer, lcquad_model)
-        inf_result_data_path = self.config['data']["inf_result_data"]
-        test_generated_df.to_csv(inf_result_data_path, index=False)
-        self.logger.info(f"RM output(test) {inf_result_data_path}")
+        inf_test_result_datapath = self.config['data']["inf_result_data"]
+        test_generated_df.to_csv(inf_test_result_datapath, index=False)
+        self.logger.info(f"Inference output(test) {inf_test_result_datapath}")
 
         # generate scores for each test sample
         self.calculate_score(test_generated_df)

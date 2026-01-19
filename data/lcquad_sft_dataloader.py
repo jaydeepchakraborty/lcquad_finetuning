@@ -10,6 +10,7 @@ class LCQuadSFTDataLoader:
         self.logger = logger
         self.lcquad_tokenizer_obj = None
         self.tokenizer = None
+        self.prompt_col_nm = ""
 
     def customized_right_pad_collate_fn(
             self,
@@ -17,10 +18,10 @@ class LCQuadSFTDataLoader:
     ):
 
         # === 1. Extract entries ===
-        org_txt = [item["entry"] for item in batch]
+        org_txt = [item[self.prompt_col_nm] for item in batch]
 
-        ignore_index = self.conf['model']['model_config']['basic_config']['ignore_index'] # -100
-        max_len = self.conf['model']['model_config']['basic_config']['allowed_max_length']
+        ignore_index = self.conf['model']['sft_model']['model_config']['ignore_index'] # -100
+        max_len = self.conf['model']['sft_model']['model_config']['allowed_max_length']
 
         # tokenizer ID
         pad_token_id = self.tokenizer.pad_token_id
@@ -109,9 +110,7 @@ class LCQuadSFTDataLoader:
     def customized_left_pad_collate_fn(self, batch):
 
         # === 1. Extract text ===
-        entity = [
-            LCQuadFormatEntry.sft_format_entry_left_pad(item, "train") for item in batch
-        ]
+        org_txt = [item[self.prompt_col_nm] for item in batch]
 
         questionset_lst = [
             f"{item['question']}" for item in batch
@@ -120,13 +119,13 @@ class LCQuadSFTDataLoader:
             f"{item['sparql']}" for item in batch
         ]
 
-        max_len = self.conf['model']['model_config']['basic_config']['allowed_max_length']
+        max_len = self.conf['model']['sft_model']['model_config']['allowed_max_length']
 
         pad_token_id = self.tokenizer.pad_token_id
         eos_token_id = self.tokenizer.eos_token_id
 
         # === 2. Tokenize ===
-        tok = self.lcquad_tokenizer_obj.lcquad_txt_encoder(entity, self.tokenizer)
+        tok = self.lcquad_tokenizer_obj.lcquad_txt_encoder(org_txt, self.tokenizer)
         ip_token_ids = tok["input_ids"]  # list[list[int]]
 
         # === 3. Append EOS ===
@@ -160,28 +159,30 @@ class LCQuadSFTDataLoader:
         )
 
         return {
-            "entity": entity,
+            "org_txt": org_txt,
             "question": questionset_lst,
-            "sparql": org_aparql_lst,
+            "org_sparql": org_aparql_lst,
             "ip_modf_token_ids": ip_modf_token_ids
         }
 
-    def load_sft_dataloader(self, tokenizer, dataset, dataset_ind, padding_ind="right"):
+    def load_sft_dataloader(self, tokenizer, dataset, dataset_ind, padding_ind, col_ind):
 
-        self.logger.info(f"generating dataloader for dataset {dataset_ind}, padding {padding_ind}")
+        self.logger.info(f"generating dataloader for dataset {dataset_ind}, padding {padding_ind}, col_ind {col_ind}")
 
         self.tokenizer = tokenizer
         self.lcquad_tokenizer_obj = LCQUADTokenizer(self.conf, self.logger)
 
-        num_workers = self.conf['model']['num_workers']
+        num_workers = self.conf['model']['sft_model']['num_workers']
         if dataset_ind == "train":
-            batch_size = self.conf['model']['batch_size']['train_batch_size']
+            batch_size = self.conf['model']['sft_model']['model_config']['batch_size']['train_batch_size']
         elif dataset_ind == "val":
-            batch_size = self.conf['model']['batch_size']['val_batch_size']
+            batch_size = self.conf['model']['sft_model']['model_config']['batch_size']['val_batch_size']
         elif dataset_ind == "test":
-            batch_size = self.conf['model']['batch_size']['test_batch_size']
+            batch_size = self.conf['model']['sft_model']['model_config']['batch_size']['test_batch_size']
         else:
             raise NotImplementedError
+
+        self.prompt_col_nm = col_ind
 
         if padding_ind == "right":
             dataloader = DataLoader(
@@ -200,13 +201,6 @@ class LCQuadSFTDataLoader:
                 num_workers=num_workers
             )
         else:
-            # default
-            dataloader = DataLoader(
-                dataset,
-                batch_size=batch_size,
-                collate_fn=self.customized_right_pad_collate_fn,
-                shuffle=False,
-                num_workers=num_workers
-            )
+            raise NotImplementedError
 
         return dataloader

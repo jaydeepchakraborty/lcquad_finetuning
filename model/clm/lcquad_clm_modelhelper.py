@@ -4,6 +4,7 @@ from lcquad_finetuning.model.clm.lcquad_clm_model import LCQUADCLMModel
 from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
 from lcquad_finetuning.util.lcquad_exception import LCQUADException
 from lcquad_finetuning.util.lcquad_util import LCQuadUtil
+from lcquad_finetuning.model.lcquad_modelhelper import LCQUADMODELHelper
 
 
 class LCQUADCLMMODELHelper:
@@ -24,22 +25,14 @@ class LCQUADCLMMODELHelper:
 
     def load_base_model(self):
 
-        model_path = self.config['model']['base_model_path']
-        self.logger.info(f"loading model from {model_path}")
-        if self.config['model']['chosen_model'] == "gpt2":
-            model_obj = GPT2LMHeadModel.from_pretrained(model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            model_obj = AutoModelForCausalLM.from_pretrained(model_path)
-        else:
-            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
-            self.logger.info(msg)
-            raise LCQUADException(None, msg)
+        lcquad_modelhelper = LCQUADMODELHelper(self.config, self.logger)
+        model_obj = lcquad_modelhelper.load_model("lcquad_base_model")
 
         return model_obj
 
     def save_lcquad_clm_model(self, lcquad_clm_model):
 
-        model_path = self.config['model']['clm_model_path']
+        model_path = self.config['model']['clm_model']['clm_model_path']
 
         if self.config['model']['chosen_model'] == "gpt2":
             lcquad_clm_model.save_pretrained(model_path)

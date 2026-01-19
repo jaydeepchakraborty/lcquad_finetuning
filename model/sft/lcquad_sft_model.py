@@ -38,8 +38,8 @@ class LCQUADSFTModel:
 
         model = model.to(device)
 
-        num_epochs = self.config['model']['num_epochs']
-        epoch_eval_freq = self.config['model']['epoch_eval_freq']
+        num_epochs = self.config['model']['sft_model']['model_config']['num_epochs']
+        epoch_eval_freq = self.config['model']['sft_model']['model_config']['epoch_eval_freq']
 
         optimizer = torch.optim.AdamW(
             filter(lambda p: p.requires_grad, model.parameters()),
@@ -57,8 +57,8 @@ class LCQUADSFTModel:
             num_training_steps=num_training_steps
         )
 
-        effective_batch_size = self.config['model']['batch_size']['effective_batch_size']  # what you WANT ~ 32
-        real_batch_size = self.config['model']['batch_size']['train_batch_size']  # what fits in RAM ~ 8
+        effective_batch_size = self.config['model']['sft_model']['model_config']['batch_size']['effective_batch_size']  # what you WANT ~ 32
+        real_batch_size = self.config['model']['sft_model']['model_config']['batch_size']['train_batch_size']  # what fits in RAM ~ 8
         accum_steps = effective_batch_size // real_batch_size
 
         for epoch in range(num_epochs):
@@ -89,7 +89,6 @@ class LCQUADSFTModel:
 
             if epoch % epoch_eval_freq == 0:
                 train_loss = running_loss / len(train_loader)
-                running_loss = 0.0
                 val_loss = self.calc_loss_loader(val_loader, model)
                 self.logger.info(f"Epoch:- {epoch+1} Train loss:- {train_loss:3f} Val loss:- {val_loss:3f}")
 

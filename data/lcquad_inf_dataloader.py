@@ -14,24 +14,24 @@ class LCQuadINFDataLoader:
     def customized_left_pad_collate_fn(self, batch):
 
         # === 1. Extract text ===
-        entity = [
-            LCQuadFormatEntry.sft_format_entry_left_pad(item, "test") for item in batch
+        prompts = [
+           item['prompt_without_response'] for item in batch
         ]
 
         questionset_lst = [
             f"{item['question']}" for item in batch
         ]
         org_aparql_lst = [
-            f"{item['sparql']}" for item in batch
+            f"{item['org_sparql']}" for item in batch
         ]
 
-        max_len = self.conf['model']['model_config']['basic_config']['allowed_max_length']
+        max_len = self.conf['model']['inf_model']['model_config']['allowed_max_length']
 
         pad_token_id = self.tokenizer.pad_token_id
         eos_token_id = self.tokenizer.eos_token_id
 
         # === 2. Tokenize ===
-        tok = self.lcquad_tokenizer_obj.lcquad_txt_encoder(entity, self.tokenizer)
+        tok = self.lcquad_tokenizer_obj.lcquad_txt_encoder(prompts, self.tokenizer)
         ip_token_ids = tok["input_ids"]  # list[list[int]]
 
         # === 3. Append EOS ===
@@ -65,21 +65,21 @@ class LCQuadINFDataLoader:
         )
 
         return {
-            "entity": entity,
             "question": questionset_lst,
-            "sparql": org_aparql_lst,
+            "original_sparql": org_aparql_lst,
+            "prompt_without_response": prompts,
             "ip_modf_token_ids": ip_modf_token_ids
         }
 
-    def load_inf_dataloader(self, tokenizer, dataset, dataset_ind, padding_ind="right"):
+    def load_inf_dataloader(self, tokenizer, dataset, dataset_ind, padding_ind):
 
         self.logger.info(f"generating dataloader for dataset {dataset_ind}, padding {padding_ind}")
 
         self.tokenizer = tokenizer
         self.lcquad_tokenizer_obj = LCQUADTokenizer(self.conf, self.logger)
 
-        num_workers = self.conf['model']['num_workers']
-        batch_size = self.conf['model']['batch_size']['test_batch_size']
+        num_workers = self.conf['model']['inf_model']['num_workers']
+        batch_size = self.conf['model']['inf_model']['model_config']['batch_size']['test_batch_size']
 
         dataloader = DataLoader(
             dataset,
