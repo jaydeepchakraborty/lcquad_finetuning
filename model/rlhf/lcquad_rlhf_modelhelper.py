@@ -57,21 +57,25 @@ class LCQUADRLHFMODELHelper:
         # 1. Load SFT (policy) model
         # -----------------------------
         policy_model = self.load_policy_model()
+        policy_model.train()
 
         # -----------------------------
         # 2. Load frozen reference model
         # -----------------------------
         reference_model = self.load_reference_model()
+        reference_model.eval()
 
         # -----------------------------
         # 3. Load reward model
         # -----------------------------
         reward_model = self.load_reward_model()
+        reward_model.eval()
 
         # -----------------------------
         # 4. Load value model
         # -----------------------------
         value_model = self.load_value_model()
+        value_model.train()
 
         # train the PPO model
         lcquad_rlhf_model_obj = LCQUADRLHFModel(self.config, self.logger)

@@ -44,7 +44,7 @@ def main():
     # Step-2
     # preprocessing dataset (LCQUAD)
     ########################################################
-    lcquaddata_helper = LCQUADDataHelper(lcquad_conf, lcquad_log)
+    # lcquaddata_helper = LCQUADDataHelper(lcquad_conf, lcquad_log)
     # lcquaddata_helper.preprocess_data()
     ########################################################
 
@@ -77,7 +77,7 @@ def main():
     # lcquad_sft_model_helper.save_lcquad_sft_model(sft_trainer)
     # # testing the SFT model
     # lcquad_sft_model_helper.test_lcquad_sft_model()
-    # generate output (for validation, needed for RM model training)
+    # # inference the SFT model
     # lcquad_sft_model_helper.predict_top_K_lcquad_sft_model_helper()
     #######################################################
 
@@ -89,7 +89,7 @@ def main():
     #######################################################
     # # generate data for RL model train
     # lcquad_rm_model_helper = LCQUADRMMODELHelper(lcquad_conf, lcquad_log)
-    # generating reward model train, validation and test data
+    # # generating reward model train, validation and test data
     # lcquad_rm_model_helper.generate_reward_data()
     # lcquaddata_helper.populate_rm_dataset()
     # # training the reward model
@@ -105,12 +105,12 @@ def main():
     # Reinforcement Learning PPO and update SFT model parameters
     #######################################################
     # # generate data for RLHF-PPO model train
-    lcquaddata_helper.populate_rlhf_dataset()
+    # lcquaddata_helper.populate_rlhf_dataset()
     # # training the RLHF-PPO model
-    lcquad_rlhf_model_helper = LCQUADRLHFMODELHelper(lcquad_conf, lcquad_log)
-    rlhf_model = lcquad_rlhf_model_helper.train_policy_model()
+    # lcquad_rlhf_model_helper = LCQUADRLHFMODELHelper(lcquad_conf, lcquad_log)
+    # rlhf_model = lcquad_rlhf_model_helper.train_policy_model()
     # # saving the RLHF-PPO model
-    lcquad_rlhf_model_helper.save_policy_model(rlhf_model)
+    # lcquad_rlhf_model_helper.save_policy_model(rlhf_model)
     #######################################################
 
 

@@ -2,6 +2,7 @@ model_path: "/Volumes/Jay_4TB/model_utils/models/LC_Quad/"
 
 model:
   device: "cpu"
+  dtype: null
   chosen_model: "Qwen/Qwen2.5-1.5B"
   tokenizer: "Qwen/Qwen2.5-1.5B"
   tokenizer_path: "{{ model_path }}lcquad_tokenizer_{model_ind}"

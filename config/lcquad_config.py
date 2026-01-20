@@ -31,6 +31,8 @@ class LCQuadConfig:
         model_config = self.load_yaml_with_jinja("config/lcquad_model_config.yaml")
 
         model_config['model']['device'] = torch.device("mps" if torch.mps.is_available() else "cpu")
+        # for LoRA - SFT, only fp16 is supported by MPS system
+        model_config['model']['dtype'] = torch.float16
 
         model_ind = model_config['model']['chosen_model']
         model_version = "latest"
