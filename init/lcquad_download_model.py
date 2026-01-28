@@ -80,7 +80,7 @@ class LCQuadDownloadModel:
             raise LCQUADException(None, msg)
 
         self.logger.info(f"pre-trained Basemodel token resized to {len(tokenizer)}")
-        model_obj.resize_token_embeddings(len(tokenizer), mean_resizing=False)
+        model_obj.resize_token_embeddings(len(tokenizer), mean_resizing=True)
 
         model_path = self.config['model']['base_model_path']
         model_obj.save_pretrained(model_path)

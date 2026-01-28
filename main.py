@@ -60,6 +60,8 @@ def main():
     # clm_trainer = lcquad_clm_model_helper.training_lcquad_clm_model()
     # # saving the CLM model
     # lcquad_clm_model_helper.save_lcquad_clm_model(clm_trainer)
+    # testing the CLM model
+    # lcquad_clm_model_helper.test_lcquad_clm_model()
     ########################################################
 
 

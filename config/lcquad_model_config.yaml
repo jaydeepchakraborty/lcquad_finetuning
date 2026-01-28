@@ -10,9 +10,7 @@ model:
   clm_model:
     clm_model_path: "{{ model_path }}lcquad_clm_model_{model_ind}/{model_version}"
     model_config:
-      num_train_epochs: 100
-      learning_rate: 2e-5
-      weight_decay: 0.01
+      num_train_epochs: 10
   sft_model:
     sft_model_path: "{{ model_path }}lcquad_sft_model_{model_ind}/{model_version}"
     num_workers: 0

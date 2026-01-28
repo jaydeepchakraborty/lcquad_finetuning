@@ -5,6 +5,7 @@ from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
 from lcquad_finetuning.util.lcquad_exception import LCQUADException
 from lcquad_finetuning.util.lcquad_util import LCQuadUtil
 from lcquad_finetuning.model.lcquad_modelhelper import LCQUADMODELHelper
+from lcquad_finetuning.model.clm.lcquad_clm_testhelper import LCQUADCLMMODELTESTHelper
 
 
 class LCQUADCLMMODELHelper:
@@ -57,9 +58,12 @@ class LCQUADCLMMODELHelper:
 
         # loading the modified tokenizer
         tokenizer = self.load_tokenizer()
+        tokenizer.padding_side = "right"  # for training
 
         # loading the base LLM model
         base_model = self.load_base_model()
+        device = self.config['model']['device']
+        base_model.to(device)
 
         lcquad_model = LCQUADCLMModel(self.config, self.logger)
         # domain adaptive pretraining
@@ -67,7 +71,34 @@ class LCQUADCLMMODELHelper:
 
         return trainer
 
+    def load_clm_model(self):
+        lcquad_modelhelper = LCQUADMODELHelper(self.config, self.logger)
+        model_obj = lcquad_modelhelper.load_model("lcquad_clm_model")
 
+        return model_obj
+
+    def test_lcquad_clm_model(self):
+
+        # loading the modified tokenizer
+        tokenizer = self.load_tokenizer()
+        tokenizer.padding_side = "right"
+
+        clm_model = self.load_clm_model()
+        device = self.config['model']['device']
+        clm_model.to(device)
+        clm_model.eval()
+
+
+        lcquad_model_test_obj = LCQUADCLMMODELTESTHelper(self.config, self.logger)
+
+        # # validation on the single sample data dataset
+        # prefix = "SELECT ?answer WHERE { wd:Q4549135 "
+        # next_token = "wdt:P22 ?X"
+        # lcquad_model_test_obj.test_lcquad_clm_model_with_prefix(prefix, next_token, tokenizer, clm_model)
+
+        # validation on the entire dataset
+        lcquad_test_clm_ds = self.load_train_clm_dataset()
+        lcquad_model_test_obj.test_lcquad_clm_model_with_datatset(lcquad_test_clm_ds, tokenizer, clm_model)
 
 
 

@@ -16,7 +16,11 @@ class LCQUADMODELHelper:
         if self.config['model']['chosen_model'] == "gpt2":
             model_obj = GPT2LMHeadModel.from_pretrained(model_path)
         elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            model_obj = AutoModelForCausalLM.from_pretrained(model_path)
+            dtype = self.config['model']['dtype']
+            model_obj = AutoModelForCausalLM.from_pretrained(
+                                                            model_path,
+                                                            dtype=dtype,
+                                                            device_map=None)
         else:
             msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
             self.logger.info(msg)
@@ -31,12 +35,11 @@ class LCQUADMODELHelper:
         if self.config['model']['chosen_model'] == "gpt2":
             model_obj = GPT2LMHeadModel.from_pretrained(model_path)
         elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            device = self.config['model']['device']
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(
                 model_path,
                 dtype=dtype,
-                device_map=device
+                device_map=None
             )
         else:
             msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
@@ -224,6 +227,8 @@ class LCQUADMODELHelper:
 
         if model_ind == 'lcquad_base_model':
             return self.load_base_model()
+        if model_ind == 'lcquad_clm_model':
+            return self.load_lcquad_clm_model()
         elif model_ind == 'lcquad_clm_for_sft_model':
             return self.load_lcquad_clm_for_sft_model()
         elif model_ind == 'lcquad_sft_model':
