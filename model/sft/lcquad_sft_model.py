@@ -8,14 +8,12 @@ class LCQUADSFTModel:
         self.config = config
         self.logger = logger
 
-    def calc_loss_batch(self, input_batch, target_batch, model):
-        outputs = model(input_ids=input_batch, labels=target_batch)
-        loss = outputs.loss
-        return loss
-
     def calc_loss_loader(self, dataloader, model):
+
+        val_loss = 0.0
+
         model.eval()
-        with torch.no_grad():
+        with ((torch.no_grad())):
             total_loss = 0
             if len(dataloader) == 0:
                 return float("nan")
@@ -23,27 +21,32 @@ class LCQUADSFTModel:
             num_batches = len(dataloader)
 
             for batch_data in dataloader:
-                input_batch, target_batch = batch_data['ip_modf_token_ids'], batch_data['lbl_modf_token_ids']
-                loss = self.calc_loss_batch(input_batch, target_batch, model)
+                input_batch = batch_data['ip_modf_token_ids']
+                attention_mask_batch = batch_data['attention_mask']
+                target_batch = batch_data['lbl_modf_token_ids']
+
+                outputs = model(input_ids=input_batch,
+                                attention_mask=attention_mask_batch,
+                                labels=target_batch)
+                loss = outputs.loss
                 total_loss += loss.item()
 
+            val_loss = total_loss / num_batches
+
         model.train()
-        return total_loss / num_batches
+        return val_loss
 
 
     def train_lcquad_sft_model(self, model, train_loader, val_loader):
-
-        device = self.config['model']['device']
-        self.logger.info(f"device:- {device}")
-
-        model = model.to(device)
 
         num_epochs = self.config['model']['sft_model']['model_config']['num_epochs']
         epoch_eval_freq = self.config['model']['sft_model']['model_config']['epoch_eval_freq']
 
         optimizer = torch.optim.AdamW(
             filter(lambda p: p.requires_grad, model.parameters()),
-            lr=5e-5
+            lr=2e-5,
+            betas=(0.9, 0.95),
+            weight_decay=0.0
         )
 
         # Use linear warmup + cosine decay (or linear decay).
@@ -68,9 +71,22 @@ class LCQUADSFTModel:
             running_loss = 0.0
 
             for batch_id, batch_data in enumerate(train_loader):
-                input_batch, target_batch = batch_data['ip_modf_token_ids'], batch_data['lbl_modf_token_ids']
+                input_batch = batch_data['ip_modf_token_ids']
+                attention_mask_batch = batch_data['attention_mask']
+                target_batch = batch_data['lbl_modf_token_ids']
 
-                loss = self.calc_loss_batch(input_batch, target_batch, model)
+                """
+                attention_mask: 
+                Tells model to ignore padding tokens (151668)
+                Without it, model processes padding as real tokens
+                target_batch:
+                Computes loss automatically
+                -100 tokens ignored in loss
+                """
+                outputs = model(input_ids=input_batch,
+                                attention_mask=attention_mask_batch,
+                                labels=target_batch)
+                loss = outputs.loss
                 running_loss += loss.item()
                 loss = loss / accum_steps  # normalize loss
                 loss.backward()
@@ -82,7 +98,7 @@ class LCQUADSFTModel:
                 # Gradient Accumulation
                 if (batch_id + 1) % accum_steps == 0:
                     # Clip Gradients
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 0.3)
                     optimizer.step()
                     scheduler.step()
                     optimizer.zero_grad()

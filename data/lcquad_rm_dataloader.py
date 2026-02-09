@@ -30,7 +30,7 @@ class LCQuadRMDataLoader:
         # tokenizer ID
         pad_token_id = self.tokenizer.pad_token_id
         eos_token_id = self.tokenizer.eos_token_id
-        sparql_token_id = self.tokenizer.convert_tokens_to_ids("<SPARQL>")
+        sparql_token_id = self.tokenizer.convert_tokens_to_ids("<SPARQL_START>")
 
         # === 2. Tokenize entire batch at one go (much faster!) ===
         tok = self.lcquad_tokenizer_obj.lcquad_txt_encoder(org_txt, self.tokenizer)

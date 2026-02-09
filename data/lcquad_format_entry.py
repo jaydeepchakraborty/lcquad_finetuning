@@ -20,13 +20,13 @@ class LCQuadFormatEntry:
     def prompt_format_entry(entry, ind):
         instruction_text = ""
 
-        question = f"Question: {LCQuadFormatEntry.normalize_text(entry['question'])}\n" if entry["question"] else ""
+        question = f"<Q_START>{LCQuadFormatEntry.normalize_text(entry['question'])}<Q_END>" if entry["question"] else ""
 
         if ind == "prompt_with_response":
-            sparql = f"<SPARQL>\n{LCQuadFormatEntry.normalize_text(entry['sparql'])}" if entry["sparql"] else ""
+            sparql = f"<SPARQL_START>{LCQuadFormatEntry.normalize_text(entry['sparql'])}<SPARQL_END>" if entry["sparql"] else ""
             ip_txt = instruction_text + question + sparql
         elif ind == "prompt_without_response":
-            ip_txt = instruction_text + question + "<SPARQL>\n"
+            ip_txt = instruction_text + question + "<SPARQL_START>"
         else:
             raise NotImplementedError
 
@@ -36,8 +36,8 @@ class LCQuadFormatEntry:
     def prompt_rm_format_entry(entry):
         instruction_text = ""
 
-        question = f"Question: {LCQuadFormatEntry.normalize_text(entry['question'])}\n" if entry["question"] else ""
-        sparql = f"<SPARQL>\n{LCQuadFormatEntry.normalize_text(entry['generated_sparql'])}" if entry["generated_sparql"] else ""
+        question = f"<Q_START>{LCQuadFormatEntry.normalize_text(entry['question'])}<Q_END>" if entry["question"] else ""
+        sparql = f"<SPARQL_START>{LCQuadFormatEntry.normalize_text(entry['generated_sparql'])}<SPARQL_END>" if entry["generated_sparql"] else ""
         ip_txt = instruction_text + question + sparql
 
         return ip_txt

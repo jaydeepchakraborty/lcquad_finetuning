@@ -1,10 +1,10 @@
-from lcquad_finetuning.model.lcquad_modelhelper import LCQUADMODELHelper
-from lcquad_finetuning.util.lcquad_util import LCQuadUtil
 from lcquad_finetuning.util.util_lib import *
+from lcquad_finetuning.util.lcquad_util import LCQuadUtil
+from lcquad_finetuning.util.lcquad_exception import LCQUADException
 from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
 from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
 from lcquad_finetuning.model.sft.lcquad_sft_model import LCQUADSFTModel
-from lcquad_finetuning.util.lcquad_exception import LCQUADException
+from lcquad_finetuning.model.lcquad_modelhelper import LCQUADMODELHelper
 
 
 class LCQUADSFTMODELHelper:
@@ -59,6 +59,10 @@ class LCQUADSFTMODELHelper:
 
         # training the LCQUAD model
         model = self.load_lcquad_clm_model()
+        device = self.config['model']['device']
+        self.logger.info(f"device:- {device}")
+        model.to(device)
+
         lcquad_model_sft_obj = LCQUADSFTModel(self.config, self.logger)
         lcquad_sft_model = lcquad_model_sft_obj.train_lcquad_sft_model(model, train_dataloader, val_dataloader)
 
@@ -95,9 +99,11 @@ class LCQUADSFTMODELHelper:
         with torch.inference_mode(): # same no_grad
             for batch_idx, batch in enumerate(dataloader):
                 input_ids = batch["ip_modf_token_ids"]
+                attention_mask = batch["attention_mask"]
 
                 outputs = model.generate(
                     input_ids=input_ids,
+                    attention_mask=attention_mask,
                     max_new_tokens=allowed_max_length,
                     do_sample=False,
                     num_beams=k, # how many outputs are generated
@@ -105,7 +111,7 @@ class LCQUADSFTMODELHelper:
                     eos_token_id=tokenizer.eos_token_id
                 )
 
-                gen_tokens = outputs[:, input_ids.size(1):]
+                gen_tokens = outputs[:, input_ids.shape[1]:]
                 gen_texts = tokenizer.batch_decode(
                     gen_tokens,
                     skip_special_tokens=True
@@ -135,11 +141,11 @@ class LCQUADSFTMODELHelper:
 
     def predict_top_K_lcquad_sft_model_helper(self):
 
-        padding_ind = "left"
+        padding_ind = "right"
 
         # loading the tokenizer
         tokenizer = self.load_tokenizer()
-        tokenizer.padding_side = padding_ind # during inference default padding is left
+        tokenizer.padding_side = padding_ind # during inference default padding is right
         # loading the trained SFT model
         lcquad_model = self.load_lcquad_sft_model()
         lcquad_model.config.use_cache = True # enable KV caching during inference
@@ -149,8 +155,11 @@ class LCQUADSFTMODELHelper:
 
         # generating training output
         train_dataset_file_path = self.config['data']["sft_train_dataset"]
+        """
+        passing as "test", to use "customized_test_right_pad_collate_fn()"
+        """
         train_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, train_dataset_file_path,
-                                                                      "train", padding_ind, "prompt_without_response")
+                                                                      "test", padding_ind, "prompt_without_response")
         self.logger.info(f"train dataloader {len(train_dataloader)}")
         train_generated_df = self.predict_top_K_lcquad_sft_model(train_dataloader, tokenizer, lcquad_model)
         sft_train_result_datapath = self.config['data']["sft_train_result_data"]
@@ -159,9 +168,12 @@ class LCQUADSFTMODELHelper:
 
         # generating validation output
         valid_dataset_file_path = self.config['data']["sft_val_dataset"]
+        """
+        passing as "test", to use "customized_test_right_pad_collate_fn()"
+        """
         valid_dataloader = lcquad_data_loader_obj.load_sft_dataloader(tokenizer, valid_dataset_file_path,
-                                                                      "val", padding_ind, "prompt_without_response")
-        self.logger.info(f"train dataloader {len(valid_dataloader)}")
+                                                                      "test", padding_ind, "prompt_without_response")
+        self.logger.info(f"valid dataloader {len(valid_dataloader)}")
         valid_generated_df = self.predict_top_K_lcquad_sft_model(valid_dataloader, tokenizer, lcquad_model)
         sft_valid_result_datapath = self.config['data']["sft_val_result_data"]
         valid_generated_df.to_csv(sft_valid_result_datapath, index=False)

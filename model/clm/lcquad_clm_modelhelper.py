@@ -1,4 +1,5 @@
 from lcquad_finetuning.util.util_lib import *
+import lcquad_finetuning.util.lcquad_cnst as lcquad_cnst
 from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
 from lcquad_finetuning.model.clm.lcquad_clm_model import LCQUADCLMModel
 from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
@@ -35,9 +36,31 @@ class LCQUADCLMMODELHelper:
 
         model_path = self.config['model']['clm_model']['clm_model_path']
 
-        if self.config['model']['chosen_model'] == "gpt2":
-            lcquad_clm_model.save_pretrained(model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
+        if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_clm_model.save_model(model_path)
+            self.logger.info(f"CLM model saved to {model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
             lcquad_clm_model.save_model(model_path)
             self.logger.info(f"CLM model saved to {model_path}")
             model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
@@ -62,6 +85,7 @@ class LCQUADCLMMODELHelper:
 
         # loading the base LLM model
         base_model = self.load_base_model()
+        base_model.train()
         device = self.config['model']['device']
         base_model.to(device)
 
@@ -92,13 +116,13 @@ class LCQUADCLMMODELHelper:
         lcquad_model_test_obj = LCQUADCLMMODELTESTHelper(self.config, self.logger)
 
         # # validation on the single sample data dataset
-        # prefix = "SELECT ?answer WHERE { wd:Q4549135 "
-        # next_token = "wdt:P22 ?X"
-        # lcquad_model_test_obj.test_lcquad_clm_model_with_prefix(prefix, next_token, tokenizer, clm_model)
+        prefix = "SELECT ?answer WHERE { wd:Q4549135 "
+        next_token = "wdt:P22 ?X"
+        lcquad_model_test_obj.test_lcquad_clm_model_with_prefix(prefix, next_token, tokenizer, clm_model)
 
         # validation on the entire dataset
-        lcquad_test_clm_ds = self.load_train_clm_dataset()
-        lcquad_model_test_obj.test_lcquad_clm_model_with_datatset(lcquad_test_clm_ds, tokenizer, clm_model)
+        # lcquad_test_clm_ds = self.load_train_clm_dataset()
+        # lcquad_model_test_obj.test_lcquad_clm_model_with_datatset(lcquad_test_clm_ds, tokenizer, clm_model)
 
 
 

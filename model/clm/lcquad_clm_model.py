@@ -1,5 +1,7 @@
+from lcquad_finetuning.util.lcquad_exception import LCQUADException
 from lcquad_finetuning.util.lcquad_util import LCQuadUtil
 from lcquad_finetuning.util.util_lib import *
+import lcquad_finetuning.util.lcquad_cnst as lcquad_cnst
 
 class LCQUADCLMModel:
 
@@ -39,56 +41,214 @@ class LCQUADCLMModel:
 
         clm_model_path = self.config['model']['clm_model']['clm_model_path']
         clm_model_path = clm_model_path.replace('latest', 'tmp')
-        training_args = TrainingArguments(output_dir=clm_model_path,
-                                          overwrite_output_dir=True,
 
-                                          fp16=False, # use fp32 for stability
-                                          bf16=False,
-                                          use_cpu=False, # FORCE CPU (disables CUDA + MPS)
+        if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
+            training_args = TrainingArguments(output_dir=clm_model_path,
+                                              overwrite_output_dir=True,
 
-                                          per_device_train_batch_size=2,
-                                          gradient_accumulation_steps=16,
+                                              fp16=False,  # use fp32 for stability
+                                              bf16=False,
+                                              use_cpu=False,  # FORCE CPU (disables CUDA + MPS)
 
-                                          num_train_epochs=int(self.config['model']['clm_model']['model_config']['num_train_epochs']),
+                                              per_device_train_batch_size=2,
+                                              gradient_accumulation_steps=16,
 
-                                          learning_rate=3e-6, # very small for fp16 CLM train,
-                                          weight_decay=0.0, # weight decay increases fp16 instability
+                                              num_train_epochs=int(self.config['model']['clm_model']['model_config'][
+                                                                       'num_train_epochs']),
 
+                                              learning_rate=1e-5,  # full-param DAPT fp32
+                                              weight_decay=0.01,  # regularization for full-param training
 
-                                          max_grad_norm=1.0, # gradient clipping for fp16
+                                              max_grad_norm=1.0,  # gradient clipping
 
-                                          warmup_steps=200, # For the first 200 optimizer steps, the learning rate is gradually increased from 0 → target learning rate.
+                                              warmup_steps=200,
+                                              # For the first 200 optimizer steps, the learning rate is gradually increased from 0 → target learning rate.
 
-                                          logging_steps=500,
-                                          save_steps=2000,
-                                          save_total_limit=2,
+                                              logging_steps=500,
+                                              save_steps=2000,
+                                              save_total_limit=2,
 
-                                          dataloader_pin_memory=False, # pin_memory=True is useful for CUDA (NVIDIA GPUs)
-                                          )
+                                              dataloader_pin_memory=False,
+                                              # pin_memory=True is useful for CUDA (NVIDIA GPUs)
+                                              )
 
-        # training the model
-        trainer = Trainer(
-            model=base_model,
-            args=training_args,
-            data_collator=data_collator,
-            train_dataset=train_clm_dataset,  # Torch Dataset
-        )
+            # training the model
+            trainer = Trainer(
+                model=base_model,
+                args=training_args,
+                data_collator=data_collator,
+                train_dataset=train_clm_dataset,  # Torch Dataset
+            )
 
-        trainer.train()
+            trainer.train()
 
-        # # Check one parameter data-type and device
-        # p = next(base_model.parameters())
-        # print("model param device:", p.device)
-        # print("model dtype:", p.dtype)
-        #
-        # train_dl = trainer.get_train_dataloader()
-        # batch = next(iter(train_dl))
-        #
-        # for k, v in batch.items():
-        #     print(k, v.device, v.dtype)
+            return trainer
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
+            training_args = TrainingArguments(output_dir=clm_model_path,
+                                              overwrite_output_dir=True,
 
+                                              fp16=False, # use fp32 for stability
+                                              bf16=False,
+                                              use_cpu=False, # FORCE CPU (disables CUDA + MPS)
 
-        self.logger.info(f"CLM trainer is saved at {clm_model_path}")
+                                              per_device_train_batch_size=2,
+                                              gradient_accumulation_steps=16,
 
-        return trainer
+                                              num_train_epochs=int(self.config['model']['clm_model']['model_config']['num_train_epochs']),
+
+                                              learning_rate=1e-5, # full-param DAPT fp32
+                                              weight_decay=0.01, # regularization for full-param training
+
+                                              max_grad_norm=1.0, # gradient clipping
+
+                                              warmup_steps=200, # For the first 200 optimizer steps, the learning rate is gradually increased from 0 → target learning rate.
+
+                                              logging_steps=500,
+                                              save_steps=2000,
+                                              save_total_limit=2,
+
+                                              dataloader_pin_memory=False, # pin_memory=True is useful for CUDA (NVIDIA GPUs)
+                                              )
+
+            # training the model
+            trainer = Trainer(
+                model=base_model,
+                args=training_args,
+                data_collator=data_collator,
+                train_dataset=train_clm_dataset,  # Torch Dataset
+            )
+
+            trainer.train()
+
+            return trainer
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
+            training_args = TrainingArguments(output_dir=clm_model_path,
+                                              overwrite_output_dir=True,
+
+                                              fp16=False,  # use fp32 for stability
+                                              bf16=False,
+                                              use_cpu=False,  # FORCE CPU (disables CUDA + MPS)
+
+                                              per_device_train_batch_size=2,
+                                              gradient_accumulation_steps=16,
+                                              gradient_checkpointing=True,
+                                              remove_unused_columns=False,  # IMPORTANT for PEFT
+
+                                              num_train_epochs=int(self.config['model']['clm_model']['model_config'][
+                                                                       'num_train_epochs']),
+
+                                              learning_rate=2e-4,  # LoRA DAPT fp32
+                                              weight_decay=0.0,  # not needed for LoRA
+
+                                              max_grad_norm=1.0,  # gradient clipping
+
+                                              warmup_steps=200,
+                                              # For the first 200 optimizer steps, the learning rate is gradually increased from 0 → target learning rate.
+
+                                              logging_steps=500,
+                                              save_steps=2000,
+                                              save_total_limit=2,
+
+                                              dataloader_pin_memory=False,
+                                              # pin_memory=True is useful for CUDA (NVIDIA GPUs)
+                                              )
+
+            # training the model
+            trainer = Trainer(
+                model=base_model,
+                args=training_args,
+                data_collator=data_collator,
+                train_dataset=train_clm_dataset,  # Torch Dataset
+            )
+
+            trainer.train()
+
+            return trainer
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
+            training_args = TrainingArguments(output_dir=clm_model_path,
+                                              overwrite_output_dir=True,
+
+                                              fp16=False,  # use fp32 for stability
+                                              bf16=False,
+                                              use_cpu=False,  # FORCE CPU (disables CUDA + MPS)
+
+                                              per_device_train_batch_size=2,
+                                              gradient_accumulation_steps=16,
+                                              gradient_checkpointing=True,
+                                              remove_unused_columns=False,  # IMPORTANT for PEFT
+
+                                              num_train_epochs=int(self.config['model']['clm_model']['model_config'][
+                                                                       'num_train_epochs']),
+
+                                              learning_rate=2e-4,  # LoRA DAPT fp32
+                                              weight_decay=0.0,  # not needed for LoRA
+
+                                              max_grad_norm=1.0,  # gradient clipping
+
+                                              warmup_steps=200,
+                                              # For the first 200 optimizer steps, the learning rate is gradually increased from 0 → target learning rate.
+
+                                              logging_steps=500,
+                                              save_steps=2000,
+                                              save_total_limit=2,
+
+                                              dataloader_pin_memory=False,
+                                              # pin_memory=True is useful for CUDA (NVIDIA GPUs)
+                                              )
+
+            # training the model
+            trainer = Trainer(
+                model=base_model,
+                args=training_args,
+                data_collator=data_collator,
+                train_dataset=train_clm_dataset,  # Torch Dataset
+            )
+
+            trainer.train()
+
+            return trainer
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
+            training_args = TrainingArguments(output_dir=clm_model_path,
+                                              overwrite_output_dir=True,
+
+                                              fp16=False, # use fp32 for stability
+                                              bf16=False,
+                                              use_cpu=False, # FORCE CPU (disables CUDA + MPS)
+
+                                              per_device_train_batch_size=2,
+                                              gradient_accumulation_steps=16,
+                                              gradient_checkpointing=True,
+                                              remove_unused_columns=False,  # IMPORTANT for PEFT
+
+                                              num_train_epochs=int(self.config['model']['clm_model']['model_config']['num_train_epochs']),
+
+                                              learning_rate=2e-4, # LoRA DAPT fp32
+                                              weight_decay=0.0, # not needed for LoRA
+
+                                              max_grad_norm=1.0, # gradient clipping
+
+                                              warmup_steps=200, # For the first 200 optimizer steps, the learning rate is gradually increased from 0 → target learning rate.
+
+                                              logging_steps=500,
+                                              save_steps=2000,
+                                              save_total_limit=2,
+
+                                              dataloader_pin_memory=False, # pin_memory=True is useful for CUDA (NVIDIA GPUs)
+                                              )
+
+            # training the model
+            trainer = Trainer(
+                model=base_model,
+                args=training_args,
+                data_collator=data_collator,
+                train_dataset=train_clm_dataset,  # Torch Dataset
+            )
+
+            trainer.train()
+
+            return trainer
+        else:
+            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
+            self.logger.info(msg)
+            raise LCQUADException(None, msg)
 

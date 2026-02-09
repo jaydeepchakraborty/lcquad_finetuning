@@ -1,6 +1,6 @@
 from lcquad_finetuning.util.util_lib import *
 from lcquad_finetuning.util.lcquad_exception import LCQUADException
-
+import lcquad_finetuning.util.lcquad_cnst as lcquad_cnst
 
 class LCQUADTokenizer:
 
@@ -10,20 +10,31 @@ class LCQUADTokenizer:
 
     def load_tokenizer(self):
 
-        if self.config['model']['chosen_model'] == "gpt2":
-
-            tokenizer_path = self.config["model"]["tokenizer_path"]
-            self.logger.info(f"loading tokenizer: {tokenizer_path} - START")
-            tokenizer = GPT2Tokenizer.from_pretrained(tokenizer_path)
-            self.logger.info(f"loading tokenizer: {tokenizer_path} - FINISH")
-
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-
+        if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
             tokenizer_path = self.config["model"]["tokenizer_path"]
             self.logger.info(f"loading tokenizer: {tokenizer_path} - START")
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
             self.logger.info(f"loading tokenizer: {tokenizer_path} - FINISH")
-
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
+            tokenizer_path = self.config["model"]["tokenizer_path"]
+            self.logger.info(f"loading tokenizer: {tokenizer_path} - START")
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+            self.logger.info(f"loading tokenizer: {tokenizer_path} - FINISH")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
+            tokenizer_path = self.config["model"]["tokenizer_path"]
+            self.logger.info(f"loading tokenizer: {tokenizer_path} - START")
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+            self.logger.info(f"loading tokenizer: {tokenizer_path} - FINISH")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
+            tokenizer_path = self.config["model"]["tokenizer_path"]
+            self.logger.info(f"loading tokenizer: {tokenizer_path} - START")
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+            self.logger.info(f"loading tokenizer: {tokenizer_path} - FINISH")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
+            tokenizer_path = self.config["model"]["tokenizer_path"]
+            self.logger.info(f"loading tokenizer: {tokenizer_path} - START")
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+            self.logger.info(f"loading tokenizer: {tokenizer_path} - FINISH")
         else:
             msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
             self.logger.info(msg)

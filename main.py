@@ -1,9 +1,16 @@
 import os
 import sys
 
+# os.environ["ACCELERATE_USE_CPU"] = "1"
+# os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = ""
+# os.environ["ACCELERATE_DISABLE_MPS"] = "1"
+
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 
 from util.util_lib import *
+import lcquad_finetuning.tokens.lcquad_tokens as lcquad_tokens
 from lcquad_finetuning.config.lcquad_config import LCQuadConfig
 from lcquad_finetuning.util.lcquad_logger import LCQuadLogger
 from lcquad_finetuning.init.lcquad_init import LCQuadInit
@@ -14,6 +21,9 @@ from lcquad_finetuning.model.sft.lcquad_sft_modelhelper import LCQUADSFTMODELHel
 from lcquad_finetuning.model.rm.lcquad_rm_modelhelper import LCQUADRMMODELHelper
 from lcquad_finetuning.model.rlhf.lcquad_rlhf_modelhelper import LCQUADRLHFMODELHelper
 from lcquad_finetuning.inference_engine.lcquad_inf import LCQUADInfHelper
+#
+# from huggingface_hub import login
+# login(token = lcquad_tokens.HUGGINGFACE_TOKEN)
 
 
 def main():

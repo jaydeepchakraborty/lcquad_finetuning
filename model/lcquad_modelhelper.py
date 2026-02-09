@@ -1,7 +1,9 @@
+from lcquad_finetuning.util.util_lib import *
+import lcquad_finetuning.util.lcquad_cnst as lcquad_cnst
+from lcquad_finetuning.util.lcquad_exception import LCQUADException
 from lcquad_finetuning.model.rm.lcquad_rm_model import LCQUADRMModel
 from lcquad_finetuning.model.vm.lcquad_vm_model import LCQUADVMModel
-from lcquad_finetuning.util.lcquad_exception import LCQUADException
-from lcquad_finetuning.util.util_lib import *
+
 
 class LCQUADMODELHelper:
 
@@ -13,14 +15,100 @@ class LCQUADMODELHelper:
 
         model_path = self.config['model']['base_model_path']
         self.logger.info(f"loading model from {model_path}")
-        if self.config['model']['chosen_model'] == "gpt2":
-            model_obj = GPT2LMHeadModel.from_pretrained(model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
+        if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
             dtype = self.config['model']['dtype']
-            model_obj = AutoModelForCausalLM.from_pretrained(
-                                                            model_path,
-                                                            dtype=dtype,
+            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
+                                                            torch_dtype=dtype,
                                                             device_map=None)
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
+            dtype = self.config['model']['dtype']
+            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
+                                                            torch_dtype=dtype,
+                                                            device_map=None)
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
+            # memory issue ~ Use LoRA / PEFT
+            dtype = self.config['model']['dtype']
+            base_model = AutoModelForCausalLM.from_pretrained(model_path,
+                                                             torch_dtype=dtype,
+                                                             device_map=None)
+            lora_config = LoraConfig(
+                r=8,
+                lora_alpha=16,
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+                lora_dropout=0.05,
+                bias="none",
+                task_type="CAUSAL_LM"
+            )
+
+            model_obj = get_peft_model(base_model, lora_config)
+
+            # Ensure LoRA parameters and new token embeddings are trainable
+            for name, param in model_obj.named_parameters():
+                if "lora" in name or "embed_tokens" in name:
+                    param.requires_grad = True
+            # model_obj.print_trainable_parameters()
+
+            # Enable gradient checkpointing (On CPU or small GPUs)
+            model_obj.enable_input_require_grads()
+            model_obj.config.use_cache = False  # Required for checkpointing
+            model_obj.gradient_checkpointing_enable() # saves memory by trading compute for memory
+
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
+            # memory issue ~ Use LoRA / PEFT
+            dtype = self.config['model']['dtype']
+            base_model = AutoModelForCausalLM.from_pretrained(model_path,
+                                                             torch_dtype=dtype,
+                                                             device_map=None)
+            lora_config = LoraConfig(
+                r=8,
+                lora_alpha=16,
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+                lora_dropout=0.05,
+                bias="none",
+                task_type="CAUSAL_LM"
+            )
+
+            model_obj = get_peft_model(base_model, lora_config)
+
+            # Ensure LoRA parameters and new token embeddings are trainable
+            for name, param in model_obj.named_parameters():
+                if "lora" in name or "embed_tokens" in name:
+                    param.requires_grad = True
+            # model_obj.print_trainable_parameters()
+
+            # Enable gradient checkpointing (On CPU or small GPUs)
+            model_obj.enable_input_require_grads()
+            model_obj.config.use_cache = False  # Required for checkpointing
+            model_obj.gradient_checkpointing_enable() # saves memory by trading compute for memory
+
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
+            # memory issue ~ Use LoRA / PEFT
+            dtype = self.config['model']['dtype']
+            base_model = AutoModelForCausalLM.from_pretrained(model_path,
+                                                            torch_dtype=dtype,
+                                                            device_map=None)
+            lora_config = LoraConfig(
+                r=8,
+                lora_alpha=16,
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+                lora_dropout=0.05,
+                bias="none",
+                task_type="CAUSAL_LM"
+            )
+
+            model_obj = get_peft_model(base_model, lora_config)
+
+            # Ensure LoRA parameters and new token embeddings are trainable
+            for name, param in model_obj.named_parameters():
+                if "lora" in name or "embed_tokens" in name:
+                    param.requires_grad = True
+            # model_obj.print_trainable_parameters()
+
+            # Enable gradient checkpointing (On CPU or small GPUs)
+            model_obj.enable_input_require_grads()
+            model_obj.config.use_cache = False  # Required for checkpointing
+            model_obj.gradient_checkpointing_enable() # saves memory by trading compute for memory
+
         else:
             msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
             self.logger.info(msg)
@@ -32,21 +120,40 @@ class LCQUADMODELHelper:
         model_path = self.config['model']['clm_model']['clm_model_path']
         self.logger.info(f"loading model from {model_path}")
 
-        if self.config['model']['chosen_model'] == "gpt2":
-            model_obj = GPT2LMHeadModel.from_pretrained(model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
+        if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
             dtype = self.config['model']['dtype']
-            model_obj = AutoModelForCausalLM.from_pretrained(
-                model_path,
-                dtype=dtype,
-                device_map=None
-            )
+            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
+                                                             torch_dtype=dtype,
+                                                             device_map=None)
+            return model_obj
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
+            dtype = self.config['model']['dtype']
+            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
+                                                             torch_dtype=dtype,
+                                                             device_map=None)
+            return model_obj
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
+            dtype = self.config['model']['dtype']
+            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
+                                                              torch_dtype=dtype,
+                                                              device_map=None)
+            return model_obj
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
+            dtype = self.config['model']['dtype']
+            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
+                                                             torch_dtype=dtype,
+                                                             device_map=None)
+            return model_obj
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
+            dtype = self.config['model']['dtype']
+            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
+                                                            torch_dtype=dtype,
+                                                            device_map=None)
+            return model_obj
         else:
             msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
             self.logger.info(msg)
             raise LCQUADException(None, msg)
-
-        return model_obj
 
     def load_lcquad_clm_for_sft_model(self):
 
@@ -72,6 +179,7 @@ class LCQUADMODELHelper:
                 task_type="CAUSAL_LM"
             )
             model_obj = get_peft_model(model_obj, lora_config)
+            # Ensure LoRA parameters only are trainable
             for name, param in model_obj.named_parameters():
                 if "lora" in name:
                     param.requires_grad = True
@@ -79,15 +187,11 @@ class LCQUADMODELHelper:
             model_obj.enable_input_require_grads()
             # Enable gradient checkpointing
             model_obj.config.use_cache = False  # Required for checkpointing, On CPU or small GPUs
-            model_obj.gradient_checkpointing_enable() # save memory, only if OOM ( Out of Memory )
+            model_obj.gradient_checkpointing_enable() # saves memory by trading compute for memory
         else:
             msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
             self.logger.info(msg)
             raise LCQUADException(None, msg)
-
-        device = self.config['model']['device']
-        self.logger.info(f"device:- {device}")
-        model_obj.to(device)
 
         return model_obj
 
