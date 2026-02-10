@@ -18,18 +18,18 @@ class LCQUADMODELHelper:
         if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-                                                            torch_dtype=dtype,
+                                                            dtype=dtype,
                                                             device_map=None)
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-                                                            torch_dtype=dtype,
+                                                            dtype=dtype,
                                                             device_map=None)
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
             # memory issue ~ Use LoRA / PEFT
             dtype = self.config['model']['dtype']
             base_model = AutoModelForCausalLM.from_pretrained(model_path,
-                                                             torch_dtype=dtype,
+                                                             dtype=dtype,
                                                              device_map=None)
             lora_config = LoraConfig(
                 r=8,
@@ -57,7 +57,7 @@ class LCQUADMODELHelper:
             # memory issue ~ Use LoRA / PEFT
             dtype = self.config['model']['dtype']
             base_model = AutoModelForCausalLM.from_pretrained(model_path,
-                                                             torch_dtype=dtype,
+                                                             dtype=dtype,
                                                              device_map=None)
             lora_config = LoraConfig(
                 r=8,
@@ -85,7 +85,7 @@ class LCQUADMODELHelper:
             # memory issue ~ Use LoRA / PEFT
             dtype = self.config['model']['dtype']
             base_model = AutoModelForCausalLM.from_pretrained(model_path,
-                                                            torch_dtype=dtype,
+                                                            dtype=dtype,
                                                             device_map=None)
             lora_config = LoraConfig(
                 r=8,
@@ -123,31 +123,31 @@ class LCQUADMODELHelper:
         if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-                                                             torch_dtype=dtype,
+                                                             dtype=dtype,
                                                              device_map=None)
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-                                                             torch_dtype=dtype,
+                                                             dtype=dtype,
                                                              device_map=None)
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-                                                              torch_dtype=dtype,
+                                                              dtype=dtype,
                                                               device_map=None)
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-                                                             torch_dtype=dtype,
+                                                             dtype=dtype,
                                                              device_map=None)
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-                                                            torch_dtype=dtype,
+                                                            dtype=dtype,
                                                             device_map=None)
             return model_obj
         else:
