@@ -115,14 +115,14 @@ class LCQUADCLMMODELHelper:
 
         lcquad_model_test_obj = LCQUADCLMMODELTESTHelper(self.config, self.logger)
 
-        # # validation on the single sample data dataset
+        # validation on the single sample data dataset
         prefix = "SELECT ?answer WHERE { wd:Q4549135 "
         next_token = "wdt:P22 ?X"
         lcquad_model_test_obj.test_lcquad_clm_model_with_prefix(prefix, next_token, tokenizer, clm_model)
 
         # validation on the entire dataset
-        # lcquad_test_clm_ds = self.load_train_clm_dataset()
-        # lcquad_model_test_obj.test_lcquad_clm_model_with_datatset(lcquad_test_clm_ds, tokenizer, clm_model)
+        lcquad_test_clm_ds = self.load_train_clm_dataset()
+        lcquad_model_test_obj.test_lcquad_clm_model_with_datatset(lcquad_test_clm_ds, tokenizer, clm_model)
 
 
 

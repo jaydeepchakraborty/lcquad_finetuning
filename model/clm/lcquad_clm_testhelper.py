@@ -8,48 +8,45 @@ class LCQUADCLMMODELTESTHelper:
         self.config = config
         self.logger = logger
 
-    def next_token_stats(self, text, tokenizer, model, top_k=10):
-        enc = tokenizer(text, return_tensors="pt")
-        enc = {k: v.to(model.device) for k, v in enc.items()}
-
-        with torch.no_grad():
-            outputs = model(**enc)
-            logits = outputs.logits  # [1, seq_len, vocab]
-
-        next_logits = logits[0, -1]  # last position
-        probs = F.softmax(next_logits, dim=-1)
-
-        topk = torch.topk(probs, top_k)
-
-        tokens = tokenizer.convert_ids_to_tokens(topk.indices.tolist())
-        return list(zip(tokens, topk.values.tolist()))
-
     def true_token_rank(self, prefix, true_next, tokenizer, model):
-        enc = tokenizer(prefix, return_tensors="pt")
-        enc = {k: v.to(model.device) for k, v in enc.items()}
+        """
+        Auto-regressive token-by-token rank check.
+        - Tokenize true_next into individual tokens
+        - For each token: predict, record rank, append to prefix
+        Returns list of (token_str, rank) tuples
+        """
 
-        true_id = tokenizer.convert_tokens_to_ids(true_next)
+        results = []
+        current_ids = tokenizer.encode(prefix, add_special_tokens=False)
 
-        with torch.no_grad():
-            logits = model(**enc).logits[0, -1]
+        true_ids = tokenizer.encode(true_next, add_special_tokens=False)
+        for true_id in true_ids:
+            enc = torch.tensor([current_ids], device=model.device)
+            with torch.no_grad():
+                logits = model(input_ids=enc).logits[0, -1]
 
-        rank = (logits > logits[true_id]).sum().item() + 1
-        return rank
+            rank = (logits > logits[true_id]).sum().item() + 1
+            token_str = tokenizer.decode([true_id])
+            results.append((token_str, rank))
+
+            current_ids.append(true_id)
+
+        return results
 
     def test_lcquad_clm_model_with_prefix(self, prefix, next_token, tokenizer, model):
-        nxt_tok_stats_info = self.next_token_stats(prefix,
-                                                   tokenizer,
-                                                   model)
-        print("nxt_tok_stats_info:- ")
-        print(nxt_tok_stats_info)
 
-        rank = self.true_token_rank(
+        results = self.true_token_rank(
             prefix,
             next_token,
             tokenizer,
             model
         )
-        print(f"rank:- {rank}")
+        print("token-by-token ranks:- ")
+        for token_str, rank in results:
+            print(f"  token: '{token_str}', rank: {rank}")
+
+        avg_rank = np.mean([r for _, r in results])
+        print(f"avg rank:- {avg_rank:.1f}")
 
         return
 
@@ -57,7 +54,7 @@ class LCQUADCLMMODELTESTHelper:
         """
         Returns True if token is whitespace-only or punctuation-only.
         """
-        if token.startswith("Ġ"):
+        if token.startswith("Ġ") or token.startswith("▁"):
             token = token[1:]
 
         # whitespace
@@ -78,15 +75,18 @@ class LCQUADCLMMODELTESTHelper:
             input_ids = torch.tensor(sample["input_ids"], device=device).unsqueeze(0)
             attention_mask = torch.tensor(sample["attention_mask"], device=device).unsqueeze(0)
 
-            outputs = model(
-                input_ids=input_ids,
-                attention_mask=attention_mask
-            )
+            with torch.no_grad():
+                outputs = model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask
+                )
 
             logits = outputs.logits  # [1, seq_len, vocab]
-            seq_len = input_ids.size(1)
+            batch_seq_len = input_ids.size(1)
 
-            for i in range(3, seq_len):
+            i = 1
+            while i < batch_seq_len:
+                # it check handles padding. if pad comes the input ends
                 if attention_mask[0, i] == 0:
                     break
 
@@ -95,6 +95,7 @@ class LCQUADCLMMODELTESTHelper:
 
                 # skip trivial tokens
                 if self.is_trivial_token(true_token, tokenizer):
+                    i += 1
                     continue
 
                 token_logits = logits[0, i - 1]
@@ -103,6 +104,7 @@ class LCQUADCLMMODELTESTHelper:
                 rank = (token_logits > true_logit).sum().item() + 1
 
                 ranks.append(rank)
+                i += 1
 
         ranks = np.array(ranks)
         """
