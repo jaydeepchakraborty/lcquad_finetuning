@@ -5,6 +5,7 @@ import sys
 # os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 # os.environ["CUDA_VISIBLE_DEVICES"] = ""
 # os.environ["ACCELERATE_DISABLE_MPS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
@@ -16,7 +17,7 @@ from lcquad_finetuning.util.lcquad_logger import LCQuadLogger
 from lcquad_finetuning.init.lcquad_init import LCQuadInit
 from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
 
-from lcquad_finetuning.model.clm.lcquad_clm_modelhelper import LCQUADCLMMODELHelper
+from lcquad_finetuning.model.dapt.lcquad_dapt_modelhelper import LCQUADDAPTMODELHelper
 from lcquad_finetuning.model.sft.lcquad_sft_modelhelper import LCQUADSFTMODELHelper
 from lcquad_finetuning.model.rm.lcquad_rm_modelhelper import LCQUADRMMODELHelper
 from lcquad_finetuning.model.rlhf.lcquad_rlhf_modelhelper import LCQUADRLHFMODELHelper
@@ -54,24 +55,24 @@ def main():
     # Step-2
     # preprocessing dataset (LCQUAD)
     ########################################################
-    # lcquaddata_helper = LCQUADDataHelper(lcquad_conf, lcquad_log)
+    lcquaddata_helper = LCQUADDataHelper(lcquad_conf, lcquad_log)
     # lcquaddata_helper.preprocess_data()
     ########################################################
 
     ########################################################
     # STEP-3
-    # CLM (Causal Language Model) LCQUAD model
-    # domain adaptive pretraining
+    # DAPT (domain adaptive pretraining) LCQUAD model
+    # training, testsing 
     ########################################################
-    # generate data for CLM model train
-    # lcquaddata_helper.populate_clm_dataset()
-    # lcquad_clm_model_helper = LCQUADCLMMODELHelper(lcquad_conf, lcquad_log)
-    # # training the CLM model
-    # clm_trainer = lcquad_clm_model_helper.training_lcquad_clm_model()
-    # # saving the CLM model
-    # lcquad_clm_model_helper.save_lcquad_clm_model(clm_trainer)
-    # testing the CLM model
-    # lcquad_clm_model_helper.test_lcquad_clm_model()
+    # # generate data for DAPT model train
+    # lcquaddata_helper.populate_dapt_dataset()
+    lcquad_dapt_model_helper = LCQUADDAPTMODELHelper(lcquad_conf, lcquad_log)
+    # training the DAPT model
+    dapt_trainer = lcquad_dapt_model_helper.training_lcquad_dapt_model()
+    # saving the DAPT model
+    lcquad_dapt_model_helper.save_lcquad_dapt_model(dapt_trainer)
+    # # testing the DAPT model
+    # lcquad_dapt_model_helper.test_lcquad_dapt_model()
     ########################################################
 
 
@@ -80,7 +81,7 @@ def main():
     # SFT (Supervised Finetuning) LCQUAD model
     # training, testing instruction based finetuning
     #######################################################
-    # # generate data for SFT model train
+    # generate data for SFT model train
     # lcquaddata_helper.populate_sft_dataset()
     # lcquad_sft_model_helper = LCQUADSFTMODELHelper(lcquad_conf, lcquad_log)
     # # training the SFT model

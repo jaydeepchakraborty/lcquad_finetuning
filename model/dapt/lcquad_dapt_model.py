@@ -3,13 +3,13 @@ from lcquad_finetuning.util.lcquad_util import LCQuadUtil
 from lcquad_finetuning.util.util_lib import *
 import lcquad_finetuning.util.lcquad_cnst as lcquad_cnst
 
-class LCQUADCLMModel:
+class LCQUADDAPTModel:
 
     def __init__(self, config, logger):
         self.config = config
         self.logger = logger
 
-    def train_lcquad_clm_model(self, train_clm_dataset, tokenizer, base_model):
+    def train_lcquad_dapt_model(self, train_dapt_dataset, tokenizer, base_model):
 
         """
         DataCollator does (automatically)
@@ -39,11 +39,11 @@ class LCQUADCLMModel:
         752 × 10 ≈ 7,520 optimizer steps total
         """
 
-        clm_model_path = self.config['model']['clm_model']['clm_model_path']
-        clm_model_path = clm_model_path.replace('latest', 'tmp')
+        dapt_model_path = self.config['model']['dapt_model']['dapt_model_path']
+        dapt_model_path = dapt_model_path.replace('latest', 'tmp')
 
         if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
-            training_args = TrainingArguments(output_dir=clm_model_path,
+            training_args = TrainingArguments(output_dir=dapt_model_path,
                                               overwrite_output_dir=True,
 
                                               fp16=False,  # use fp32 for stability
@@ -53,7 +53,7 @@ class LCQUADCLMModel:
                                               per_device_train_batch_size=2,
                                               gradient_accumulation_steps=16,
 
-                                              num_train_epochs=int(self.config['model']['clm_model']['model_config'][
+                                              num_train_epochs=int(self.config['model']['dapt_model']['model_config'][
                                                                        'num_train_epochs']),
 
                                               learning_rate=1e-5,  # full-param DAPT fp32
@@ -77,14 +77,14 @@ class LCQUADCLMModel:
                 model=base_model,
                 args=training_args,
                 data_collator=data_collator,
-                train_dataset=train_clm_dataset,  # Torch Dataset
+                train_dataset=train_dapt_dataset,  # Torch Dataset
             )
 
             trainer.train()
 
             return trainer
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
-            training_args = TrainingArguments(output_dir=clm_model_path,
+            training_args = TrainingArguments(output_dir=dapt_model_path,
                                               overwrite_output_dir=True,
 
                                               fp16=False, # use fp32 for stability
@@ -94,7 +94,7 @@ class LCQUADCLMModel:
                                               per_device_train_batch_size=2,
                                               gradient_accumulation_steps=16,
 
-                                              num_train_epochs=int(self.config['model']['clm_model']['model_config']['num_train_epochs']),
+                                              num_train_epochs=int(self.config['model']['dapt_model']['model_config']['num_train_epochs']),
 
                                               learning_rate=1e-5, # full-param DAPT fp32
                                               weight_decay=0.01, # regularization for full-param training
@@ -115,14 +115,14 @@ class LCQUADCLMModel:
                 model=base_model,
                 args=training_args,
                 data_collator=data_collator,
-                train_dataset=train_clm_dataset,  # Torch Dataset
+                train_dataset=train_dapt_dataset,  # Torch Dataset
             )
 
             trainer.train()
 
             return trainer
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
-            training_args = TrainingArguments(output_dir=clm_model_path,
+            training_args = TrainingArguments(output_dir=dapt_model_path,
                                               overwrite_output_dir=True,
 
                                               fp16=False,  # use fp32 for stability
@@ -134,7 +134,7 @@ class LCQUADCLMModel:
                                               gradient_checkpointing=True,
                                               remove_unused_columns=False,  # IMPORTANT for PEFT
 
-                                              num_train_epochs=int(self.config['model']['clm_model']['model_config'][
+                                              num_train_epochs=int(self.config['model']['dapt_model']['model_config'][
                                                                        'num_train_epochs']),
 
                                               learning_rate=2e-4,  # LoRA DAPT fp32
@@ -158,14 +158,14 @@ class LCQUADCLMModel:
                 model=base_model,
                 args=training_args,
                 data_collator=data_collator,
-                train_dataset=train_clm_dataset,  # Torch Dataset
+                train_dataset=train_dapt_dataset,  # Torch Dataset
             )
 
             trainer.train()
 
             return trainer
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
-            training_args = TrainingArguments(output_dir=clm_model_path,
+            training_args = TrainingArguments(output_dir=dapt_model_path,
                                               overwrite_output_dir=True,
 
                                               fp16=False,  # use fp32 for stability
@@ -177,7 +177,7 @@ class LCQUADCLMModel:
                                               gradient_checkpointing=True,
                                               remove_unused_columns=False,  # IMPORTANT for PEFT
 
-                                              num_train_epochs=int(self.config['model']['clm_model']['model_config'][
+                                              num_train_epochs=int(self.config['model']['dapt_model']['model_config'][
                                                                        'num_train_epochs']),
 
                                               learning_rate=2e-4,  # LoRA DAPT fp32
@@ -201,14 +201,14 @@ class LCQUADCLMModel:
                 model=base_model,
                 args=training_args,
                 data_collator=data_collator,
-                train_dataset=train_clm_dataset,  # Torch Dataset
+                train_dataset=train_dapt_dataset,  # Torch Dataset
             )
 
             trainer.train()
 
             return trainer
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
-            training_args = TrainingArguments(output_dir=clm_model_path,
+            training_args = TrainingArguments(output_dir=dapt_model_path,
                                               overwrite_output_dir=True,
 
                                               fp16=False, # use fp32 for stability
@@ -220,7 +220,7 @@ class LCQUADCLMModel:
                                               gradient_checkpointing=True,
                                               remove_unused_columns=False,  # IMPORTANT for PEFT
 
-                                              num_train_epochs=int(self.config['model']['clm_model']['model_config']['num_train_epochs']),
+                                              num_train_epochs=int(self.config['model']['dapt_model']['model_config']['num_train_epochs']),
 
                                               learning_rate=2e-4, # LoRA DAPT fp32
                                               weight_decay=0.0, # not needed for LoRA
@@ -241,7 +241,7 @@ class LCQUADCLMModel:
                 model=base_model,
                 args=training_args,
                 data_collator=data_collator,
-                train_dataset=train_clm_dataset,  # Torch Dataset
+                train_dataset=train_dapt_dataset,  # Torch Dataset
             )
 
             trainer.train()

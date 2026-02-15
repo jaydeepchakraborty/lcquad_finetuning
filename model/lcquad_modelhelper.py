@@ -3,6 +3,7 @@ import lcquad_finetuning.util.lcquad_cnst as lcquad_cnst
 from lcquad_finetuning.util.lcquad_exception import LCQUADException
 from lcquad_finetuning.model.rm.lcquad_rm_model import LCQUADRMModel
 from lcquad_finetuning.model.vm.lcquad_vm_model import LCQUADVMModel
+from lcquad_finetuning.util.lcquad_util import LCQuadUtil
 
 
 class LCQUADMODELHelper:
@@ -34,7 +35,10 @@ class LCQUADMODELHelper:
             lora_config = LoraConfig(
                 r=8,
                 lora_alpha=16,
-                target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+                modules_to_save=["embed_tokens"],
+                ensure_weight_tying=True,
                 lora_dropout=0.05,
                 bias="none",
                 task_type="CAUSAL_LM"
@@ -62,7 +66,10 @@ class LCQUADMODELHelper:
             lora_config = LoraConfig(
                 r=8,
                 lora_alpha=16,
-                target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+                modules_to_save=["embed_tokens"],
+                ensure_weight_tying=True,
                 lora_dropout=0.05,
                 bias="none",
                 task_type="CAUSAL_LM"
@@ -90,7 +97,10 @@ class LCQUADMODELHelper:
             lora_config = LoraConfig(
                 r=8,
                 lora_alpha=16,
-                target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+                modules_to_save=["embed_tokens"],
+                ensure_weight_tying=True,
                 lora_dropout=0.05,
                 bias="none",
                 task_type="CAUSAL_LM"
@@ -116,77 +126,234 @@ class LCQUADMODELHelper:
 
         return model_obj
 
-    def load_lcquad_clm_model(self):
-        model_path = self.config['model']['clm_model']['clm_model_path']
-        self.logger.info(f"loading model from {model_path}")
+    def save_lcquad_dapt_model(self, lcquad_dapt_model):
+
+        model_path = self.config['model']['dapt_model']['dapt_model_path']
 
         if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+            model_path = model_path.replace('latest', LCQuadUtil.get_curr_tm())
+            lcquad_dapt_model.save_model(model_path)
+            self.logger.info(f"DAPT model saved to {model_path}")
+        else:
+            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
+            self.logger.info(msg)
+            raise LCQUADException(None, msg)
+
+        return
+
+    def load_lcquad_dapt_model(self):
+        model_path = self.config['model']['dapt_model']['dapt_model_path']
+        self.logger.info(f"loading DAPT model from {model_path}")
+
+        if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
+            # GPT2-XL: full-param DAPT — full weights saved at dapt_model_path
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(model_path,
                                                              dtype=dtype,
                                                              device_map=None)
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
+            # Qwen: full-param DAPT — full weights saved at dapt_model_path
             dtype = self.config['model']['dtype']
             model_obj = AutoModelForCausalLM.from_pretrained(model_path,
                                                              dtype=dtype,
                                                              device_map=None)
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
+            # Mistral: LoRA DAPT — only adapter weights saved at dapt_model_path
+            # 1. Load original base model
+            # 2. Load DAPT adapter on top
+            # 3. Merge adapter into base weights
+            base_model_path = self.config['model']['base_model_path']
             dtype = self.config['model']['dtype']
-            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
+            self.logger.info(f"loading base model from {base_model_path}")
+            base_model = AutoModelForCausalLM.from_pretrained(base_model_path,
                                                               dtype=dtype,
                                                               device_map=None)
+            self.logger.info(f"loading DAPT LoRA adapter from {model_path}")
+            model_obj = PeftModel.from_pretrained(base_model, model_path)
+            model_obj = model_obj.merge_and_unload()
+            self.logger.info(f"DAPT LoRA adapter merged into base model")
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
+            # Gemma: LoRA DAPT — only adapter weights saved at dapt_model_path
+            # 1. Load original base model
+            # 2. Load DAPT adapter on top
+            # 3. Merge adapter into base weights
+            base_model_path = self.config['model']['base_model_path']
             dtype = self.config['model']['dtype']
-            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-                                                             dtype=dtype,
-                                                             device_map=None)
+            self.logger.info(f"loading base model from {base_model_path}")
+            base_model = AutoModelForCausalLM.from_pretrained(base_model_path,
+                                                              dtype=dtype,
+                                                              device_map=None)
+            self.logger.info(f"loading DAPT LoRA adapter from {model_path}")
+            model_obj = PeftModel.from_pretrained(base_model, model_path)
+            model_obj = model_obj.merge_and_unload()
+            self.logger.info(f"DAPT LoRA adapter merged into base model")
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
+            # Llama: LoRA DAPT — only adapter weights saved at dapt_model_path
+            # 1. Load original base model
+            # 2. Load DAPT adapter on top
+            # 3. Merge adapter into base weights
+            base_model_path = self.config['model']['base_model_path']
             dtype = self.config['model']['dtype']
-            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
-                                                            dtype=dtype,
-                                                            device_map=None)
+            self.logger.info(f"loading base model from {base_model_path}")
+            base_model = AutoModelForCausalLM.from_pretrained(base_model_path,
+                                                              dtype=dtype,
+                                                              device_map=None)
+            self.logger.info(f"loading DAPT LoRA adapter from {model_path}")
+            model_obj = PeftModel.from_pretrained(base_model, model_path)
+            model_obj = model_obj.merge_and_unload()
+            self.logger.info(f"DAPT LoRA adapter merged into base model")
             return model_obj
         else:
             msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
             self.logger.info(msg)
             raise LCQUADException(None, msg)
 
-    def load_lcquad_clm_for_sft_model(self):
+    def load_lcquad_dapt_for_sft_model(self):
 
-        if self.config['model']['chosen_model'] == "gpt2":
-            model_path = self.config['model']['clm_model']['clm_model_path']
+        if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
+            # GPT2-XL: full fine-tuning (small enough for 128GB)
+            model_path = self.config['model']['dapt_model']['dapt_model_path']
             self.logger.info(f"loading model from {model_path}")
-            model_obj = GPT2LMHeadModel.from_pretrained(model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            # for QLoRA supervised finetuning
+            dtype = self.config['model']['dtype']
+            model_obj = AutoModelForCausalLM.from_pretrained(model_path,
+                                                             dtype=dtype,
+                                                             device_map=None)
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
             """
             Apple MPS does not support 4-bit / 8-bit quantization
-            So we are doing LoRA + fp16 for mac
+            So we are doing LoRA + fp32 for mac
             """
-            model_obj = self.load_lcquad_clm_model()
+            model_obj = self.load_lcquad_dapt_model()
 
-            # Attach LoRA adapters
             lora_config = LoraConfig(
                 r=8,
                 lora_alpha=32,
-                target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],  # Qwen attention proj layers
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                                "gate_proj", "up_proj", "down_proj"],
                 lora_dropout=0.1,
                 bias="none",
                 task_type="CAUSAL_LM"
             )
             model_obj = get_peft_model(model_obj, lora_config)
-            # Ensure LoRA parameters only are trainable
+
+            # Ensure LoRA parameters and new token embeddings are trainable
             for name, param in model_obj.named_parameters():
-                if "lora" in name:
+                if "lora" in name or "embed_tokens" in name:
                     param.requires_grad = True
-            # model_obj.print_trainable_parameters()
+
             model_obj.enable_input_require_grads()
-            # Enable gradient checkpointing
-            model_obj.config.use_cache = False  # Required for checkpointing, On CPU or small GPUs
+            model_obj.config.use_cache = False  # Required for checkpointing
+            model_obj.gradient_checkpointing_enable() # saves memory by trading compute for memory
+
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
+            """
+            Apple MPS does not support 4-bit / 8-bit quantization
+            So we are doing LoRA + fp32 for mac
+            """
+            model_obj = self.load_lcquad_dapt_model()
+
+            lora_config = LoraConfig(
+                r=8,
+                lora_alpha=32,
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                                "gate_proj", "up_proj", "down_proj"],
+                lora_dropout=0.1,
+                bias="none",
+                task_type="CAUSAL_LM"
+            )
+            model_obj = get_peft_model(model_obj, lora_config)
+
+            # Ensure LoRA parameters and new token embeddings are trainable
+            for name, param in model_obj.named_parameters():
+                if "lora" in name or "embed_tokens" in name:
+                    param.requires_grad = True
+
+            model_obj.enable_input_require_grads()
+            model_obj.config.use_cache = False  # Required for checkpointing
+            model_obj.gradient_checkpointing_enable() # saves memory by trading compute for memory
+
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
+            """
+            Apple MPS does not support 4-bit / 8-bit quantization
+            So we are doing LoRA + fp32 for mac
+            """
+            model_obj = self.load_lcquad_dapt_model()
+
+            lora_config = LoraConfig(
+                r=8,
+                lora_alpha=32,
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                                "gate_proj", "up_proj", "down_proj"],
+                lora_dropout=0.1,
+                bias="none",
+                task_type="CAUSAL_LM"
+            )
+            model_obj = get_peft_model(model_obj, lora_config)
+
+            # Ensure LoRA parameters and new token embeddings are trainable
+            for name, param in model_obj.named_parameters():
+                if "lora" in name or "embed_tokens" in name:
+                    param.requires_grad = True
+
+            model_obj.enable_input_require_grads()
+            model_obj.config.use_cache = False  # Required for checkpointing
+            model_obj.gradient_checkpointing_enable() # saves memory by trading compute for memory
+
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
+            """
+            Apple MPS does not support 4-bit / 8-bit quantization
+            So we are doing LoRA + fp32 for mac
+            """
+            model_obj = self.load_lcquad_dapt_model()
+
+            lora_config = LoraConfig(
+                r=8,
+                lora_alpha=32,
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                                "gate_proj", "up_proj", "down_proj"],
+                lora_dropout=0.1,
+                bias="none",
+                task_type="CAUSAL_LM"
+            )
+            model_obj = get_peft_model(model_obj, lora_config)
+
+            # Ensure LoRA parameters and new token embeddings are trainable
+            for name, param in model_obj.named_parameters():
+                if "lora" in name or "embed_tokens" in name:
+                    param.requires_grad = True
+
+            model_obj.enable_input_require_grads()
+            model_obj.config.use_cache = False  # Required for checkpointing
             model_obj.gradient_checkpointing_enable() # saves memory by trading compute for memory
         else:
             msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
@@ -201,11 +368,11 @@ class LCQUADMODELHelper:
             sft_model_path = self.config['model']['sft_model_path']
             model_obj = GPT2LMHeadModel.from_pretrained(sft_model_path)
         elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            clm_model_obj = self.load_lcquad_clm_model()
+            dapt_model_obj = self.load_lcquad_dapt_model()
             sft_model_path = self.config['model']['sft_model']['sft_model_path']
             self.logger.info(f"SFT model loaded from {sft_model_path}")
             model_obj = PeftModel.from_pretrained(
-                clm_model_obj,
+                dapt_model_obj,
                 sft_model_path
             )
         else:
@@ -219,8 +386,8 @@ class LCQUADMODELHelper:
 
         return model_obj
 
-    def load_lcquad_clm_for_rm_model(self):
-        model_obj = self.load_lcquad_clm_model()
+    def load_lcquad_dapt_for_rm_model(self):
+        model_obj = self.load_lcquad_dapt_model()
 
         device = self.config['model']['device']
         self.logger.info(f"device:- {device}")
@@ -252,11 +419,11 @@ class LCQUADMODELHelper:
             model_obj = GPT2LMHeadModel.from_pretrained(model_path)
         elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
 
-            clm_model_obj = self.load_lcquad_clm_model()
+            dapt_model_obj = self.load_lcquad_dapt_model()
             sft_model_path = self.config['model']['sft_model']['sft_model_path']
             self.logger.info(f"SFT model loaded from {sft_model_path}")
             model_obj = PeftModel.from_pretrained(
-                clm_model_obj,
+                dapt_model_obj,
                 sft_model_path,
                 is_trainable=True # load LORA as trainable
             )
@@ -274,11 +441,11 @@ class LCQUADMODELHelper:
     def load_reference_model(self):
         self.logger.info(f"REFERENCE model loaded START")
 
-        clm_model_obj = self.load_lcquad_clm_model()
+        dapt_model_obj = self.load_lcquad_dapt_model()
         sft_model_path = self.config['model']['sft_model']['sft_model_path']
         self.logger.info(f"REFERENCE model loaded from {sft_model_path}")
         ref_model = PeftModel.from_pretrained(
-            clm_model_obj,
+            dapt_model_obj,
             sft_model_path
         )
         ref_model.eval() # evaluation mode
@@ -290,7 +457,7 @@ class LCQUADMODELHelper:
     def load_value_model(self):
         self.logger.info(f"VALUE model loaded START")
 
-        base_model_obj = self.load_lcquad_clm_model()
+        base_model_obj = self.load_lcquad_dapt_model()
         value_model_obj = LCQUADVMModel(base_model_obj, self.config, self.logger)
         device = self.config['model']['device']
         self.logger.info(f"device:- {device}")
@@ -306,11 +473,11 @@ class LCQUADMODELHelper:
             model_obj = GPT2LMHeadModel.from_pretrained(inf_model_path)
         elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
 
-            clm_model_obj = self.load_lcquad_clm_model()
+            dapt_model_obj = self.load_lcquad_dapt_model()
             inf_model_path = self.config['model']['inf_model']['inf_model_path']
             self.logger.info(f"Inference model loaded from {inf_model_path}")
             model_obj = PeftModel.from_pretrained(
-                clm_model_obj,
+                dapt_model_obj,
                 inf_model_path
             )
 
@@ -331,14 +498,14 @@ class LCQUADMODELHelper:
 
         if model_ind == 'lcquad_base_model':
             return self.load_base_model()
-        if model_ind == 'lcquad_clm_model':
-            return self.load_lcquad_clm_model()
-        elif model_ind == 'lcquad_clm_for_sft_model':
-            return self.load_lcquad_clm_for_sft_model()
+        if model_ind == 'lcquad_dapt_model':
+            return self.load_lcquad_dapt_model()
+        elif model_ind == 'lcquad_dapt_for_sft_model':
+            return self.load_lcquad_dapt_for_sft_model()
         elif model_ind == 'lcquad_sft_model':
             return self.load_lcquad_sft_model()
-        elif model_ind == 'lcquad_clm_for_rm_model':
-            return self.load_lcquad_clm_for_rm_model()
+        elif model_ind == 'lcquad_dapt_for_rm_model':
+            return self.load_lcquad_dapt_for_rm_model()
         elif model_ind == 'lcquad_policy_model':
             return self.load_policy_model()
         elif model_ind == 'lcquad_reference_model':

@@ -1,6 +1,6 @@
 from lcquad_finetuning.util.util_lib import *
 
-class LCQUADCLMDataset(Dataset):
+class LCQUADDAPTDataset(Dataset):
 
     def __init__(self, data_file_df, tokenizer, max_length=128):
         self.tokenizer = tokenizer

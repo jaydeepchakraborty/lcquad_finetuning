@@ -5,6 +5,7 @@ class LCQUADSFTDataset(Dataset):
     def __init__(self, data_file):
 
         df = pd.read_csv(data_file)
+        df.drop_duplicates(inplace=True)
         self.questions = df["question"].astype(str).tolist()
         self.sparql = df["sparql"].astype(str).tolist()
         self.prompt_with_response = df["prompt_with_response"].astype(str).tolist()

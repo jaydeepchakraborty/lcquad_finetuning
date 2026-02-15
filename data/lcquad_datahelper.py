@@ -2,7 +2,7 @@ from lcquad_finetuning.data.lcquad_inf_dataloader import LCQuadINFDataLoader
 from lcquad_finetuning.util.util_lib import *
 from lcquad_finetuning.data.lcquad_datapreprocessing import LCQuadDataProcessing
 from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
-from lcquad_finetuning.data.lcquad_clm_dataset import LCQUADCLMDataset
+from lcquad_finetuning.data.lcquad_dapt_dataset import LCQUADDAPTDataset
 from lcquad_finetuning.data.lcquad_sft_dataset import LCQUADSFTDataset
 from lcquad_finetuning.data.lcquad_sft_dataloader import LCQuadSFTDataLoader
 from lcquad_finetuning.data.lcquad_rlhf_dataset import LCQUADRLHFDataset
@@ -24,40 +24,40 @@ class LCQUADDataHelper:
         lcquad_data_preprocessing_obj.process_data()
     ############## PREPROCESSING BASE DATA END ##############
 
-    ############## CLM DATA START ##############
-    def generate_clm_dataset(self, data_file_df, tokenizer):
-        dataset = LCQUADCLMDataset(data_file_df, tokenizer)
+    ############## DAPT DATA START ##############
+    def generate_dapt_dataset(self, data_file_df, tokenizer):
+        dataset = LCQUADDAPTDataset(data_file_df, tokenizer)
         return dataset
 
-    def save_clm_dataset(self, data_set, dataset_path):
+    def save_dapt_dataset(self, data_set, dataset_path):
         self.logger.info(f"dataset saved at {dataset_path}")
         torch.save(data_set, dataset_path)
         return
 
-    def populate_clm_dataset(self):
+    def populate_dapt_dataset(self):
         train_df = pd.read_csv(self.config['data']['modf_train_data'])
         valid_df = pd.read_csv(self.config['data']['modf_valid_data'])
         test_df = pd.read_csv(self.config['data']['modf_test_data'])
 
         df = pd.concat([train_df, valid_df, test_df], ignore_index=True)
 
-        # populating train clm dataset
+        # populating train dapt dataset
         tok_obj = LCQUADTokenizer(self.config, logger=self.logger)
         tokenizer = tok_obj.load_tokenizer()
-        data_set = self.generate_clm_dataset(df, tokenizer)
+        data_set = self.generate_dapt_dataset(df, tokenizer)
 
-        # saving train clm dataset
-        dataset_path = self.config['data']['clm_train_dataset']
-        self.save_clm_dataset(data_set, dataset_path)
+        # saving train dapt dataset
+        dataset_path = self.config['data']['dapt_train_dataset']
+        self.save_dapt_dataset(data_set, dataset_path)
 
-    def load_clm_dataset(self):
-        dataset_file_path = self.config['data']['clm_train_dataset']
+    def load_dapt_dataset(self):
+        dataset_file_path = self.config['data']['dapt_train_dataset']
         self.logger.info(f"loading dataset from:- {dataset_file_path}")
-        with torch.serialization.safe_globals([LCQUADCLMDataset]):
+        with torch.serialization.safe_globals([LCQUADDAPTDataset]):
             dataset = torch.load(dataset_file_path, weights_only=False)
 
         return dataset
-    ############## CLM DATA END ##############
+    ############## DAPT DATA END ##############
 
     ############## SFT DATA START ##############
     def generate_sft_dataset(self, data_file):

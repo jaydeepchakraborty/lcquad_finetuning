@@ -3,6 +3,39 @@ from lcquad_finetuning.data.lcquad_sft_dataset import LCQUADSFTDataset
 from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
 from lcquad_finetuning.data.lcquad_format_entry import LCQuadFormatEntry
 
+class BucketBatchSampler(Sampler):
+    """
+    Groups samples by token length into buckets, shuffles bucket order
+    and within-bucket order each epoch, then yields batches.
+    Reduces padding waste while maintaining training randomness.
+    """
+
+    def __init__(self, token_lengths, batch_size, bucket_size_multiplier=10):
+        self.batch_size = batch_size
+        # Sort indices by token length
+        sorted_indices = sorted(range(len(token_lengths)), key=lambda i: token_lengths[i])
+        # Divide into buckets (each bucket has ~bucket_size_multiplier batches worth of samples)
+        bucket_size = batch_size * bucket_size_multiplier
+        self.buckets = [sorted_indices[i:i + bucket_size]
+                        for i in range(0, len(sorted_indices), bucket_size)]
+
+    def __iter__(self):
+        # Shuffle bucket order each epoch
+        bucket_order = list(range(len(self.buckets)))
+        random.shuffle(bucket_order)
+
+        for bi in bucket_order:
+            bucket = list(self.buckets[bi])
+            # Shuffle within bucket (preserves approximate length grouping)
+            random.shuffle(bucket)
+            # Yield batches from this bucket
+            for i in range(0, len(bucket), self.batch_size):
+                yield bucket[i:i + self.batch_size]
+
+    def __len__(self):
+        return sum(-(-len(b) // self.batch_size) for b in self.buckets)
+
+
 class LCQuadSFTDataLoader:
 
     def __init__(self, config, logger):
@@ -25,16 +58,13 @@ class LCQuadSFTDataLoader:
 
         # tokenizer ID
         pad_token_id = self.tokenizer.pad_token_id
-        eos_token_id = self.tokenizer.eos_token_id
+        # eos_token_id = self.tokenizer.eos_token_id
         sparql_token_id = self.tokenizer.convert_tokens_to_ids("<SPARQL_START>")
 
         # === 2. Tokenize entire batch at one go (much faster!) ===
         tok = self.lcquad_tokenizer_obj.lcquad_txt_encoder(org_txt, self.tokenizer)
 
         ip_token_ids = tok["input_ids"]  # list[list[int]]
-        # === 3. Add EOS to each sequence ===
-        for ids in ip_token_ids:
-            ids.append(eos_token_id)
 
         # === 4. Determine padding length ===
         batch_max = max(len(ids) for ids in ip_token_ids)
@@ -69,16 +99,18 @@ class LCQuadSFTDataLoader:
             ip_modf_text = self.lcquad_tokenizer_obj.lcquad_tok_decoder(padded, self.tokenizer)
             ip_modf_text_lst.append(ip_modf_text)
 
-            # ==== BUILD TARGET LABELS ====
+            # ==== BUILD TARGET LABELS (aligned with input_ids, no manual shift) ====
+            # HuggingFace model(input_ids, labels=labels).loss shifts internally
             labels = padded.copy()
-            # SHIFT LEFT
-            for i in range(len(labels) - 1):
-                labels[i] = labels[i + 1]
-            labels[-1] = pad_token_id
             lbl_org_token_ids.append(labels.copy())
             lbl_org_text = self.lcquad_tokenizer_obj.lcquad_tok_decoder(labels, self.tokenizer)
             lbl_org_text_lst.append(lbl_org_text)
-            # MASK EVERYTHING BEFORE (and including) <SPARQL>
+            """
+            input_ids:      <Q_START>  question  <Q_END>  <SPARQL_START>  SELECT  ?answer  <SPARQL_END>  PAD
+            attention_mask:  1          1         1        1               1       1        1             0
+            labels:         -100       -100      -100     -100            SELECT  ?answer  <SPARQL_END>  -100
+            """
+            # MASK EVERYTHING BEFORE (and including) <SPARQL_START>
             try:
                 idx = padded.index(sparql_token_id)
             except ValueError:
@@ -86,6 +118,9 @@ class LCQuadSFTDataLoader:
             if idx != -1:
                 for j in range(idx + 1):
                     labels[j] = ignore_index
+            else:
+                # <SPARQL_START> not found (truncated) — skip this sample's loss
+                labels = [ignore_index] * len(labels)
             # MASK PAD
             labels = [ignore_index if t == pad_token_id else t for t in labels]
             lbl_modf_text = self.lcquad_tokenizer_obj.lcquad_tok_decoder(labels, self.tokenizer)
@@ -267,7 +302,20 @@ class LCQuadSFTDataLoader:
 
         self.prompt_col_nm = col_ind
 
-        if padding_ind == "right" and (dataset_ind == "train" or dataset_ind == "val"):
+        if padding_ind == "right" and dataset_ind == "train":
+            # Compute token lengths for bucket sampling
+            all_texts = [dataset[i][col_ind] for i in range(len(dataset))]
+            tok = self.lcquad_tokenizer_obj.lcquad_txt_encoder(all_texts, self.tokenizer)
+            token_lengths = [len(ids) for ids in tok["input_ids"]]
+
+            bucket_sampler = BucketBatchSampler(token_lengths, batch_size)
+            dataloader = DataLoader(
+                dataset,
+                batch_sampler=bucket_sampler,
+                collate_fn=self.customized_train_right_pad_collate_fn,
+                num_workers=num_workers
+            )
+        elif padding_ind == "right" and dataset_ind == "val":
             dataloader = DataLoader(
                 dataset,
                 batch_size=batch_size,

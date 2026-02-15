@@ -110,9 +110,9 @@ class LCQUADRMMODELHelper:
 
         return train_dataloader, val_dataloader, test_dataloader
 
-    def load_lcquad_clm_model(self):
+    def load_lcquad_dapt_model(self):
         lcquad_modelhelper = LCQUADMODELHelper(self.config, self.logger)
-        model_obj = lcquad_modelhelper.load_model("lcquad_clm_for_rm_model")
+        model_obj = lcquad_modelhelper.load_model("lcquad_dapt_for_rm_model")
         return model_obj
 
     def train_rm_model(self, rm_model, train_rm_dataloader, tokenizer):
@@ -170,9 +170,9 @@ class LCQUADRMMODELHelper:
         tokenizer = self.load_tokenizer()
 
         # loading the base Causal Language model (trained on new tokens)
-        clm_model = self.load_lcquad_clm_model()
+        dapt_model = self.load_lcquad_dapt_model()
         device = self.config["model"]["device"]
-        rm_model_obj = LCQUADRMModel(clm_model, self.config, self.logger).to(device)
+        rm_model_obj = LCQUADRMModel(dapt_model, self.config, self.logger).to(device)
         rm_model = self.train_rm_model(rm_model_obj, train_rm_dataloader, tokenizer)
 
         return rm_model

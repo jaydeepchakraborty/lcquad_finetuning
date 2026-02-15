@@ -41,8 +41,8 @@ class LCQuadConfig:
         base_model_path = model_config['model']['base_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
         model_config['model']['base_model_path'] = base_model_path
 
-        clm_model_path = model_config['model']['clm_model']['clm_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
-        model_config['model']['clm_model']['clm_model_path'] = clm_model_path
+        dapt_model_path = model_config['model']['dapt_model']['dapt_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
+        model_config['model']['dapt_model']['dapt_model_path'] = dapt_model_path
 
         sft_model_path = model_config['model']['sft_model']['sft_model_path'].replace("{model_ind}",model_ind).replace("{model_version}",model_version)
         model_config['model']['sft_model']['sft_model_path'] = sft_model_path

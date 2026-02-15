@@ -1,4 +1,5 @@
 from lcquad_finetuning.util.util_lib import *
+import lcquad_finetuning.util.lcquad_cnst as lcquad_cnst
 from lcquad_finetuning.util.lcquad_util import LCQuadUtil
 from lcquad_finetuning.util.lcquad_exception import LCQUADException
 from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
@@ -18,22 +19,49 @@ class LCQUADSFTMODELHelper:
         tokenizer = lcquad_tokenizer_obj.load_tokenizer()
         return tokenizer
 
-    def load_lcquad_clm_model(self):
+    def load_lcquad_dapt_model(self):
         lcquad_modelhelper = LCQUADMODELHelper(self.config, self.logger)
-        model_obj = lcquad_modelhelper.load_model("lcquad_clm_for_sft_model")
+        model_obj = lcquad_modelhelper.load_model("lcquad_dapt_for_sft_model")
         return model_obj
 
     def save_lcquad_sft_model(self, lcquad_sft_model):
         model_path = self.config['model']['sft_model']['sft_model_path']
 
-        if self.config['model']['chosen_model'] == "gpt2":
-            lcquad_sft_model.save_pretrained(model_path)
-        elif self.config['model']['chosen_model'] == "Qwen/Qwen2.5-1.5B":
-            lcquad_sft_model.save_pretrained(model_path)
-            self.logger.info(f"model saved to {model_path}")
-            model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
+        if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
+            # GPT2-XL: saves full model weights
             lcquad_sft_model.save_pretrained(model_path)
             self.logger.info(f"model saved to {model_path}")
+            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
+            lcquad_sft_model.save_pretrained(ts_model_path)
+            self.logger.info(f"model saved to {ts_model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
+            # Qwen: saves LoRA adapter weights only
+            lcquad_sft_model.save_pretrained(model_path)
+            self.logger.info(f"model saved to {model_path}")
+            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
+            lcquad_sft_model.save_pretrained(ts_model_path)
+            self.logger.info(f"model saved to {ts_model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
+            # Mistral: saves LoRA adapter weights only
+            lcquad_sft_model.save_pretrained(model_path)
+            self.logger.info(f"model saved to {model_path}")
+            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
+            lcquad_sft_model.save_pretrained(ts_model_path)
+            self.logger.info(f"model saved to {ts_model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
+            # Gemma: saves LoRA adapter weights only
+            lcquad_sft_model.save_pretrained(model_path)
+            self.logger.info(f"model saved to {model_path}")
+            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
+            lcquad_sft_model.save_pretrained(ts_model_path)
+            self.logger.info(f"model saved to {ts_model_path}")
+        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
+            # Llama: saves LoRA adapter weights only
+            lcquad_sft_model.save_pretrained(model_path)
+            self.logger.info(f"model saved to {model_path}")
+            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
+            lcquad_sft_model.save_pretrained(ts_model_path)
+            self.logger.info(f"model saved to {ts_model_path}")
         else:
             msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
             self.logger.info(msg)
@@ -58,7 +86,7 @@ class LCQUADSFTMODELHelper:
         self.logger.info(f"val dataloader batches:- {len(val_dataloader)}")
 
         # training the LCQUAD model
-        model = self.load_lcquad_clm_model()
+        model = self.load_lcquad_dapt_model()
         device = self.config['model']['device']
         self.logger.info(f"device:- {device}")
         model.to(device)

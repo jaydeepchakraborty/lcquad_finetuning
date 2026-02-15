@@ -1,0 +1,59 @@
+{
+'org_txt':
+[
+'Question: what is death location of has father of mashhur bin abdulaziz al saud\n<SPARQL>\n',
+'Question: what is the job of stephane mallarme whose field of employment is translation\n<SPARQL>\n',
+'Question: the place where moliere is buried having a latitude of 48860532 and a longitude of 2395079 is named\n<SPARQL>\n',
+'Question: when did mikhail baryshnikov become a citizen of canada\n<SPARQL>\n'
+],
+'question':
+[
+'what is death location of has father of mashhur bin abdulaziz al saud',
+'what is the job of stephane mallarme whose field of employment is translation',
+'the place where moliere is buried having a latitude of 48860532 and a longitude of 2395079 is named',
+'when did mikhail baryshnikov become a citizen of canada'
+],
+'org_sparql':
+[
+'SELECT ?answer WHERE { wd:Q4549135 wdt:P22 ?X . ?X wdt:P20 ?answer}',
+'SELECT ?answer WHERE { wd:Q767 wdt:P106 ?answer . ?answer wdt:P425 wd:Q7553}',
+"SELECT ?obj WHERE { wd:Q687 p:P119 ?s . ?s ps:P119 ?obj . ?s pq:P625 ?x filter(contains(?x,'48.860532 2.395079')) }",
+'SELECT ?value WHERE { wd:Q295420 p:P27 ?s . ?s ps:P27 wd:Q16 . ?s pq:P580 ?value}'
+],
+'ip_modf_token_ids':
+tensor(
+[
+[ 14582,     25,   1128,    374,   4545,   3728,    315,    702,   6981,
+            315,  62458,     71,    324,   9544,    668,     67,    360,   1370,
+            449,    452,    822,    661,    198, 151665,    198, 151643, 151668,
+         151668, 151668, 151668, 151668, 151668, 151668, 151668, 151668, 151668,
+         151668, 151668, 151668, 151668, 151668],
+[ 14582,     25,   1128,    374,    279,   2618,    315,   3019,     71,
+   2145,  33253,  73860,   6693,   2070,    315,  14402,    374,  14468,
+    198, 151665,    198, 151643, 151668, 151668, 151668, 151668, 151668,
+ 151668, 151668, 151668, 151668, 151668, 151668, 151668, 151668, 151668,
+ 151668, 151668, 151668, 151668, 151668],
+[ 14582,     25,    279,   1992,   1380,    296,  14225,    485,    374,
+  26918,   3432,    264,  20849,    315,    220,     19,     23,     23,
+     21,     15,     20,     18,     17,    323,    264,  20515,    315,
+    220,     17,     18,     24,     20,     15,     22,     24,    374,
+   6941,    198, 151665,    198, 151643],
+[ 14582,     25,    979,   1521,    296,  82256,    293,    658,    927,
+  21490,    859,   3635,    264,  21860,    315,  31763,    198, 151665,
+    198, 151643, 151668, 151668, 151668, 151668, 151668, 151668, 151668,
+ 151668, 151668, 151668, 151668, 151668, 151668, 151668, 151668, 151668,
+ 151668, 151668, 151668, 151668, 151668]
+ ], device='mps:0'),
+ 'attention_mask':
+ tensor(
+ [
+ [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+ 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+], device='mps:0')
+}

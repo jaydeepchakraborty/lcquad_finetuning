@@ -1,0 +1,42 @@
+###### DAPT models #######
+1) gpt2-xl ======> (02102026)
+token-by-token ranks:-
+  token: 'wdt:P22', rank: 17092
+  token: ' ?', rank: 1
+  token: 'X', rank: 1
+avg rank:- 5698.0
+
+Hit@1: 0.8256
+Hit@5: 0.8714
+Mean Rank: 115.6771
+2) Qwen/Qwen2.5-1.5B
+3) mistralai/Mistral-7B-v0.1
+token-by-token ranks:-
+  token: 'wdt:P22', rank: 16464
+  token: '?', rank: 255
+  token: 'X', rank: 10
+avg rank:- 5576.3
+
+Hit@1: 0.7447
+Hit@5: 0.8402
+Mean Rank: 3791.7896
+4) google/gemma-2-2b
+token-by-token ranks:-
+  token: 'wdt:P22', rank: 133371
+  token: ' ?', rank: 44972
+  token: 'X', rank: 45188
+
+Hit@1: 0.0647
+Hit@5: 0.0911
+Mean Rank: 103464.8446
+avg rank:- 74510.3
+5) meta-llama/Llama-2-7b-hf
+token-by-token ranks:-
+  token: 'wdt:P22', rank: 34325
+  token: '?', rank: 1
+  token: 'X', rank: 8
+avg rank:- 11444.7
+
+Hit@1: 0.1241
+Hit@5: 0.1751
+Mean Rank: 13483.8045

@@ -9,7 +9,7 @@ data:
   modf_train_data: "{{ data_path }}modf_train_data.csv"
   modf_valid_data: "{{ data_path }}modf_valid_data.csv"
   modf_test_data: "{{ data_path }}modf_test_data.csv"
-  clm_train_dataset: "{{ data_path }}train_clm_dataset.pt"
+  dapt_train_dataset: "{{ data_path }}train_dapt_dataset.pt"
   sft_train_dataset: "{{ data_path }}train_sft_dataset.pt"
   sft_val_dataset: "{{ data_path }}valid_sft_dataset.pt"
   sft_test_dataset: "{{ data_path }}test_sft_dataset.pt"

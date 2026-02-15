@@ -9,7 +9,7 @@ from lcquad_finetuning.config.lcquad_config import LCQuadConfig
 from lcquad_finetuning.data.lcquad_datahelper import LCQUADDataHelper
 from lcquad_finetuning.tokenizer.lcquad_tokenizer import LCQUADTokenizer
 from lcquad_finetuning.util.lcquad_logger import LCQuadLogger
-from lcquad_finetuning.data.lcquad_clm_dataset import LCQUADCLMDataset
+from lcquad_finetuning.data.lcquad_dapt_dataset import LCQUADDAPTDataset
 from lcquad_finetuning.data.lcquad_sft_dataset import LCQUADSFTDataset
 from lcquad_finetuning.model.lcquad_modelhelper import LCQUADMODELHelper
 
@@ -368,7 +368,11 @@ def chk_token_length(lcquad_conf, lcquad_log):
     valid_df = pd.read_csv("/Volumes/Jay_4TB/data/LC_Quad/modf_valid_data.csv")
     test_df = pd.read_csv("/Volumes/Jay_4TB/data/LC_Quad/modf_test_data.csv")
     df = pd.concat([train_df, valid_df, test_df], ignore_index=True)
-    sparqls = df["sparql"].unique()
+
+    #sparql
+    #prompt_with_response
+
+    sparqls = df["prompt_with_response"].unique()
 
     # load tokenizer
     tok_obj = LCQUADTokenizer(lcquad_conf, lcquad_log)
@@ -420,4 +424,4 @@ if __name__ == "__main__":
 
     # sft_model_training_test(lcquad_conf, lcquad_log)
 
-    # chk_token_length(lcquad_conf, lcquad_log)
+    chk_token_length(lcquad_conf, lcquad_log)

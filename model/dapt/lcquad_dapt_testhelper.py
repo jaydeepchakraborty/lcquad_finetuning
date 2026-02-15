@@ -2,7 +2,7 @@ from lcquad_finetuning.util.util_lib import *
 from lcquad_finetuning.util.lcquad_exception import LCQUADException
 from lcquad_finetuning.util.lcquad_util import LCQuadUtil
 
-class LCQUADCLMMODELTESTHelper:
+class LCQUADDAPTMODELTESTHelper:
 
     def __init__(self, config, logger):
         self.config = config
@@ -33,7 +33,7 @@ class LCQUADCLMMODELTESTHelper:
 
         return results
 
-    def test_lcquad_clm_model_with_prefix(self, prefix, next_token, tokenizer, model):
+    def test_lcquad_dapt_model_with_prefix(self, prefix, next_token, tokenizer, model):
 
         results = self.true_token_rank(
             prefix,
@@ -67,7 +67,7 @@ class LCQUADCLMMODELTESTHelper:
 
         return False
 
-    def test_lcquad_clm_model_with_datatset(self, test_ds, tokenizer, model):
+    def test_lcquad_dapt_model_with_datatset(self, test_ds, tokenizer, model):
         ranks = []
         device = self.config['model']['device']
 
