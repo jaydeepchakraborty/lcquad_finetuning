@@ -199,6 +199,7 @@ class LCQUADMODELHelper:
             self.logger.info(f"loading DAPT LoRA adapter from {model_path}")
             model_obj = PeftModel.from_pretrained(base_model, model_path)
             model_obj = model_obj.merge_and_unload()
+            model_obj.tie_weights()
             self.logger.info(f"DAPT LoRA adapter merged into base model")
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
@@ -215,6 +216,7 @@ class LCQUADMODELHelper:
             self.logger.info(f"loading DAPT LoRA adapter from {model_path}")
             model_obj = PeftModel.from_pretrained(base_model, model_path)
             model_obj = model_obj.merge_and_unload()
+            model_obj.tie_weights()
             self.logger.info(f"DAPT LoRA adapter merged into base model")
             return model_obj
         elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
@@ -231,6 +233,7 @@ class LCQUADMODELHelper:
             self.logger.info(f"loading DAPT LoRA adapter from {model_path}")
             model_obj = PeftModel.from_pretrained(base_model, model_path)
             model_obj = model_obj.merge_and_unload()
+            model_obj.tie_weights()
             self.logger.info(f"DAPT LoRA adapter merged into base model")
             return model_obj
         else:
