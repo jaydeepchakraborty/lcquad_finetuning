@@ -25,48 +25,8 @@ class LCQUADSFTMODELHelper:
         return model_obj
 
     def save_lcquad_sft_model(self, lcquad_sft_model):
-        model_path = self.config['model']['sft_model']['sft_model_path']
-
-        if self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GPT:
-            # GPT2-XL: saves full model weights
-            lcquad_sft_model.save_pretrained(model_path)
-            self.logger.info(f"model saved to {model_path}")
-            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
-            lcquad_sft_model.save_pretrained(ts_model_path)
-            self.logger.info(f"model saved to {ts_model_path}")
-        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_QWEN:
-            # Qwen: saves LoRA adapter weights only
-            lcquad_sft_model.save_pretrained(model_path)
-            self.logger.info(f"model saved to {model_path}")
-            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
-            lcquad_sft_model.save_pretrained(ts_model_path)
-            self.logger.info(f"model saved to {ts_model_path}")
-        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_MISTRAL:
-            # Mistral: saves LoRA adapter weights only
-            lcquad_sft_model.save_pretrained(model_path)
-            self.logger.info(f"model saved to {model_path}")
-            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
-            lcquad_sft_model.save_pretrained(ts_model_path)
-            self.logger.info(f"model saved to {ts_model_path}")
-        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_GEMMA:
-            # Gemma: saves LoRA adapter weights only
-            lcquad_sft_model.save_pretrained(model_path)
-            self.logger.info(f"model saved to {model_path}")
-            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
-            lcquad_sft_model.save_pretrained(ts_model_path)
-            self.logger.info(f"model saved to {ts_model_path}")
-        elif self.config['model']['chosen_model'] == lcquad_cnst.MODEL_LLAMA:
-            # Llama: saves LoRA adapter weights only
-            lcquad_sft_model.save_pretrained(model_path)
-            self.logger.info(f"model saved to {model_path}")
-            ts_model_path = model_path.replace("latest", LCQuadUtil.get_curr_tm())
-            lcquad_sft_model.save_pretrained(ts_model_path)
-            self.logger.info(f"model saved to {ts_model_path}")
-        else:
-            msg = f"chosen model is not correct: {self.config['model']['chosen_model']}"
-            self.logger.info(msg)
-            raise LCQUADException(None, msg)
-
+        lcquad_modelhelper = LCQUADMODELHelper(self.config, self.logger)
+        lcquad_modelhelper.save_lcquad_sft_model(lcquad_sft_model)
         return
 
     def training_lcquad_sft_model(self, ):

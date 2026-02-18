@@ -1,0 +1,11 @@
+###### DAPT models #######
+1) gpt2-xl ======> (02102026)
+
+2) Qwen/Qwen2.5-1.5B
+removed because instruction trained model
+
+3) mistralai/Mistral-7B-v0.1
+
+4) google/gemma-2-2b
+
+5) meta-llama/Llama-2-7b-hf

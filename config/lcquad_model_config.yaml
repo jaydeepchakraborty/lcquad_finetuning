@@ -3,7 +3,7 @@ model_path: "/Volumes/Jay_4TB/model_utils/models/LC_Quad/"
 # gpt2-xl -> 1.5B (no LORA)
 # Qwen/Qwen2.5-1.5B (no LORA) ~ X , complete failure - 02022026
 # mistralai/Mistral-7B-v0.1 (LORA)
-# google/gemma-2-2b (no LORA)
+# google/gemma-2-2b (LORA)
 # meta-llama/Llama-2-7b-hf (LORA)
 
 model:

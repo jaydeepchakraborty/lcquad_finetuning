@@ -55,6 +55,12 @@ class LCQUADDAPTMODELHelper:
         device = self.config['model']['device']
         base_model.to(device)
 
+        # free any leftover CPU tensors and MPS cache after model loading
+        gc.collect()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        LCQuadUtil.log_mps_memory(self.logger, tag="after base_model.to(device)")
+
         lcquad_model = LCQUADDAPTModel(self.config, self.logger)
         # domain adaptive pretraining
         trainer = lcquad_model.train_lcquad_dapt_model(lcquad_train_dapt_ds, tokenizer, base_model)

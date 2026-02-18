@@ -172,8 +172,8 @@ class LCQUADDAPTModel:
                                               bf16=False,
                                               use_cpu=False,  # FORCE CPU (disables CUDA + MPS)
 
-                                              per_device_train_batch_size=2,
-                                              gradient_accumulation_steps=16,
+                                              per_device_train_batch_size=1,  # reduced from 2 to 1 for MPS memory
+                                              gradient_accumulation_steps=32,  # doubled from 16 to keep effective batch=32
                                               gradient_checkpointing=True,
                                               remove_unused_columns=False,  # IMPORTANT for PEFT
 

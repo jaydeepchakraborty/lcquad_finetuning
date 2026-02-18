@@ -11,15 +11,31 @@ class LCQUADDAPTMODELTESTHelper:
     def true_token_rank(self, prefix, true_next, tokenizer, model):
         """
         Auto-regressive token-by-token rank check.
-        - Tokenize true_next into individual tokens
-        - For each token: predict, record rank, append to prefix
+        - Tokenize prefix+continuation together to get context-aware token IDs
+        - For each continuation token: predict, record rank, append to prefix
         Returns list of (token_str, rank) tuples
         """
 
         results = []
-        current_ids = tokenizer.encode(prefix, add_special_tokens=False)
+        # Tokenize prefix and full text with same add_special_tokens=True
+        # to match DAPT training (which uses default add_special_tokens=True)
+        prefix_ids = tokenizer.encode(prefix, add_special_tokens=True)
+        full_ids = tokenizer.encode(prefix + true_next, add_special_tokens=True)
 
-        true_ids = tokenizer.encode(true_next, add_special_tokens=False)
+        # Find where prefix and full tokenization diverge.
+        # Trailing spaces in prefix may be absorbed into the next token
+        # in the full text (e.g., "▁" + "wdt:P22" → "▁wdt:P22"),
+        # so we can't assume full_ids[:len(prefix_ids)] == prefix_ids.
+        split_point = 0
+        for i in range(min(len(prefix_ids), len(full_ids))):
+            if prefix_ids[i] == full_ids[i]:
+                split_point = i + 1
+            else:
+                break
+
+        # Use the common prefix as model input, rest as continuation to check
+        true_ids = full_ids[split_point:]
+        current_ids = list(full_ids[:split_point])
         for true_id in true_ids:
             enc = torch.tensor([current_ids], device=model.device)
             with torch.no_grad():

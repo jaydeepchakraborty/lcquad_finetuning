@@ -55,7 +55,7 @@ def main():
     # Step-2
     # preprocessing dataset (LCQUAD)
     ########################################################
-    lcquaddata_helper = LCQUADDataHelper(lcquad_conf, lcquad_log)
+    # lcquaddata_helper = LCQUADDataHelper(lcquad_conf, lcquad_log)
     # lcquaddata_helper.preprocess_data()
     ########################################################
 
@@ -66,11 +66,11 @@ def main():
     ########################################################
     # # generate data for DAPT model train
     # lcquaddata_helper.populate_dapt_dataset()
-    lcquad_dapt_model_helper = LCQUADDAPTMODELHelper(lcquad_conf, lcquad_log)
-    # training the DAPT model
-    dapt_trainer = lcquad_dapt_model_helper.training_lcquad_dapt_model()
-    # saving the DAPT model
-    lcquad_dapt_model_helper.save_lcquad_dapt_model(dapt_trainer)
+    # lcquad_dapt_model_helper = LCQUADDAPTMODELHelper(lcquad_conf, lcquad_log)
+    # # training the DAPT model
+    # dapt_trainer = lcquad_dapt_model_helper.training_lcquad_dapt_model()
+    # # saving the DAPT model
+    # lcquad_dapt_model_helper.save_lcquad_dapt_model(dapt_trainer)
     # # testing the DAPT model
     # lcquad_dapt_model_helper.test_lcquad_dapt_model()
     ########################################################

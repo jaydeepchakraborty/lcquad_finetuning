@@ -10,33 +10,34 @@ Hit@1: 0.8256
 Hit@5: 0.8714
 Mean Rank: 115.6771
 2) Qwen/Qwen2.5-1.5B
+removed because instruction trained model
 3) mistralai/Mistral-7B-v0.1
-token-by-token ranks:-
-  token: 'wdt:P22', rank: 16464
-  token: '?', rank: 255
-  token: 'X', rank: 10
-avg rank:- 5576.3
+token-by-token ranks:- 
+  token: 'wdt:P22', rank: 50358
+  token: '?', rank: 24563
+  token: 'X', rank: 24544
+avg rank:- 33155.0
 
-Hit@1: 0.7447
-Hit@5: 0.8402
-Mean Rank: 3791.7896
+Hit@1: 0.9277
+Hit@5: 0.9655
+Mean Rank: 48.5567
 4) google/gemma-2-2b
-token-by-token ranks:-
-  token: 'wdt:P22', rank: 133371
-  token: ' ?', rank: 44972
-  token: 'X', rank: 45188
+token-by-token ranks:- 
+  token: 'wdt:P22', rank: 134822
+  token: ' ?', rank: 334
+  token: 'X', rank: 2610
+avg rank:- 45922.0
 
-Hit@1: 0.0647
-Hit@5: 0.0911
-Mean Rank: 103464.8446
-avg rank:- 74510.3
+Hit@1: 0.9278
+Hit@5: 0.9655
+Mean Rank: 48.5673
 5) meta-llama/Llama-2-7b-hf
-token-by-token ranks:-
-  token: 'wdt:P22', rank: 34325
+token-by-token ranks:- 
+  token: 'wdt:P22', rank: 1
   token: '?', rank: 1
-  token: 'X', rank: 8
-avg rank:- 11444.7
+  token: 'X', rank: 1
+avg rank:- 1.0
 
-Hit@1: 0.1241
-Hit@5: 0.1751
-Mean Rank: 13483.8045
+Hit@1: 0.9207
+Hit@5: 0.9581
+Mean Rank: 58.8370
